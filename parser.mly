@@ -1,15 +1,15 @@
 %{
 
 	open Ast
-}%
+%}
 
 %token ELSE FALSE FN IF LET MUT RETURN STRUCT TRUE WHILE VEC PRINT
 %token <int> Tint
 %token <string> Tstring
 %token <string> IDENT
-%token INF SUP EGAL PLUS MOINS FOIS DIVISE 
+%token INF SUP EGAL PLUS MOINS FOIS DIVISE LEN 
 %token MOD AND DBLEGAL NOTEGAL INFEGAL SUPEGAL 
-%token ET OR EXCL LEFTPAR RIGHTPAR TO ENDLINE 
+%token ET OR EXCL LEFTPAR RIGHTPAR TO ENDLINE ETMUT 
 %token POINT LEFTG RIGHTG LEFTC RIGHTC COMMA EMUT
 %token EOF
 
@@ -70,13 +70,13 @@ bloc:
 ;
 
 instr:
- |ENDOFLINE {Inone}
- |e = expr ENDOFLINE {Iexpr e}
- |LET b = boption(MUT) i = IDENT EQ e = expr ENDOFLINE {Iinit ((b,i),e)}
- |LET b = boption(MUT) i = IDENT EQ j = IDENT LEFTG l = separated_list(COMMA,sous_instr) RIGHTG ENDOFLINE {IinitS ((b,i),j,l)}
+ |ENDLINE {Inone}
+ |e = expr ENDLINE {Iexpr e}
+ |LET b = boption(MUT) i = IDENT EGAL e = expr ENDLINE {Iinit ((b,i),e)}
+ |LET b = boption(MUT) i = IDENT EGAL j = IDENT LEFTG l = separated_list(COMMA,sous_instr) RIGHTG ENDLINE {IinitS ((b,i),j,l)}
  |WHILE e = expr b = bloc {Iwhile (e,b)}
- |RETURN ENDOFLINE {Ireturn None}
- |RETURN e = expr ENDOFLINE {Ireturn (Eexpr e)}
+ |RETURN ENDLINE {Ireturn None}
+ |RETURN e = expr ENDLINE {Ireturn (Eexpr e)}
  |i = ifb {Iif i}
 ;
 
@@ -96,10 +96,10 @@ expr:
  |FALSE {Cbool false}
  |i = IDENT {Cident i}
  |e = expr b = binaire e2 = expr {Binop(b,e,e2)}
- |MOINS e = expr %prec Umoins {Unop (Neg,e)}
- |FOIS e = expr %prec Ufois {Unop (Star,e)}
+ |MOINS e = expr %prec umoins {Unop (Neg,e)}
+ |FOIS e = expr %prec ufois {Unop (Star,e)}
  |u = unaire e = expr {Unop(u,e)}
- |e = expr POINT i = IDENT {Cselect (e,i)}
+ |e = expr POINT i = IDENT {Cselect (e,i)}
  |e = expr POINT LEN LEFTG RIGHTG {Clen e}
  |e = expr LEFTC e2 = expr RIGHTC {Ctab(e,e2)}
  |i = IDENT LEFTPAR l = separated_list(COMMA,expr) RIGHTPAR {Ccall(i,l)}
@@ -115,10 +115,10 @@ binaire:
  |INF  		{Inf}
  |INFEGAL	{InfEg}
  |SUP		{Sup}
- |SUEGAL	{SupEg}
- |PLUS		{Add}
+ |SUPEGAL	{SupEg}
+ |PLUS		{Add}
  |MOINS		{Sub}
- |FOIS		{Times}
+ |FOIS		{Times}
  |DIVISE	{Div}
  |MOD		{Mod}
  |AND		{And}

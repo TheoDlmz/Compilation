@@ -39,6 +39,7 @@ rule token = parse
  |"//"  {comment_line lexbuf}
  |"/*" { multicomment lexbuf; token lexbuf}
  |'"' {Tstring (parse_string lexbuf); token lexbuf}
+ |"len" {LEN}
  |ident as s {let s = Lexing.lexeme lexbuf in
 		try List.assoc s keywords
 		with Not_found -> IDENT s}
@@ -88,7 +89,7 @@ and parse_string = parse
  |"\\\\" {"\\"^(parse_string lexbuf)}
  |"\\n" {"\n"^(parse_string lexbuf)}
  |"\\\"" {"\""^(parse_string lexbuf)}
- |["\\" "\""] {raise Lexing_error "caractère illicite"}
+ |['\\' '"'] {raise Lexing_error "caractère illicite"}
  |_ as s {s^(parse_string lexbuf)}
  |eof {Lexing_error "chaîne de caractère non terminée"}
 
