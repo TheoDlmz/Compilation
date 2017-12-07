@@ -29,7 +29,7 @@ type expr =
 
 and isexpr = None | Eexpr of expr
 
-and block = {instruction : instr list; expression : isexpr}
+and block = {instruction : instr list(*; expression : isexpr*)}
 
 and ift = 
    If1 of expr*block 
@@ -40,7 +40,7 @@ and instr =
    Inone 
  | Iexpr of expr 
  | Iinit of mutident*expr
- | IinitS of mutident*ident*(ident*expr list) 
+ | IinitS of mutident*ident*((ident*expr) list) 
  | Iwhile of expr*block 
  | Ireturn of isexpr 
  | Iif of ift
