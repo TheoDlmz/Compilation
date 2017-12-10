@@ -71,7 +71,7 @@ rule token = parse
  |"[" {LEFTC}
  |"]" {RIGHTC}
  |eof {EOF}
- |_ { raise Lexing_error "Illegal caracter" }
+ |_ { raise Lexing_error "Illegal caracter at position : line "^string_of_int(lexbuf.lex_curr_p.pos_lnum)^"; column "^string_of_int(lexbuf.lex_curr_p.pos_cnum)}
 
 and comment_line = parse
  |'\n' {token lexbuf}

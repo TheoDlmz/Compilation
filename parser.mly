@@ -6,11 +6,11 @@
 %token ELSE FALSE FN IF LET MUT RETURN STRUCT TRUE WHILE VEC PRINT
 %token <int> Tint
 %token <string> Tstring
-%token <string> IDENT
+%token <Ast.ident> IDENT
 %token INF SUP EGAL PLUS MOINS FOIS DIVISE LEN 
 %token MOD AND DBLEGAL NOTEGAL INFEGAL SUPEGAL 
 %token ET OR EXCL LEFTPAR RIGHTPAR TO ENDLINE ETMUT 
-%token POINT LEFTG RIGHTG LEFTC RIGHTC COMMA EMUT
+%token POINT LEFTG RIGHTG LEFTC RIGHTC COMMA 
 %token EOF
 
 %right EGAL
@@ -41,23 +41,24 @@ decl:
 ;
 
 decl_struct:
- STRUCT i = IDENT LEFTG l = list(decl_sous_struct) RIGHTG {{nom = i; struc = l}}
+ STRUCT i = IDENT LEFTG l = separated_list(COMMA,decl_sous_struct) RIGHTG {{nom = i; struc = l}}
 ;
+
 
 decl_sous_struct:
  x = IDENT TO t = typ {(x,t)}
 ;
 
 decl_fun:
- |FN i = IDENT LEFTPAR la = list(argument) RIGHTPAR b = bloc {{nom=i;args = la;typ = none; bloc = b}}
- |FN i = IDENT LEFTPAR la = list(argument) RIGHTPAR MOINS SUP t = typ b = bloc {{nom=i;args=la;typ = t;bloc = b}}
+ |FN i = IDENT LEFTPAR la = list(argument) RIGHTPAR b = bloc {{nom=i;args = la;typ = None; bloc = b}}
+ |FN i = IDENT LEFTPAR la = list(argument) RIGHTPAR MOINS SUP t = typ b = bloc {{nom=i;args=la;typ = T t;bloc = b}}
 ;
 
 typ:
  |i = IDENT {Tident i}
  |i = IDENT INF t= typ SUP {Ttyid (i,t)}
  |ET t = typ {Ttype t}
- |ET MUT t = typ {TtypeMut t}
+ |ET MUT t = typ {Ttypemut t}
 ;
 
 argument:
@@ -65,7 +66,7 @@ argument:
 ;
 
 bloc:
- |LEFTG l = list(instr) e = expr RIGHTG {{instruction = l; expression = Eexpr e}}
+ |LEFTG l = list(instr)  e = expr  RIGHTG {{instruction = l; expression = Eexpr e}}
  |LEFTG l = list(instr) RIGHTG {{instruction = l; expression = None}}
 ;
 
@@ -81,7 +82,7 @@ instr:
 ;
 
 sous_instr:
- i = IDENT TO e = expr {(i,e)}
+ i = IDENT TO e = expr {i,e}
 ;
 
 ifb:
@@ -113,9 +114,9 @@ binaire:
  |DBLEGAL	{Equiv}
  |NOTEGAL	{Diff}
  |INF  		{Inf}
- |INFEGAL	{InfEg}
+ |INFEGAL	{Infeg}
  |SUP		{Sup}
- |SUPEGAL	{SupEg}
+ |SUPEGAL	{Supeg}
  |PLUS		{Add}
  |MOINS		{Sub}
  |FOIS		{Times}
@@ -131,5 +132,5 @@ unaire:
  |EXCL		{Not}
  |FOIS		{Star}
  |ET		{And}
- |ETMUT		{MutAnd}
+ |ETMUT		{Mutand}
 ;

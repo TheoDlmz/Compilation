@@ -7,6 +7,9 @@ type tipe =
  | Ttype of tipe
  | Ttypemut of tipe
 
+type istipe =
+ None
+ |T of tipe
 
 type bop = Equiv | Diff | Inf | Infeg | Sup | Supeg | Add | Sub | Times | Div | Mod | And | Or | Egal
 
@@ -29,7 +32,7 @@ type expr =
 
 and isexpr = None | Eexpr of expr
 
-and block = {instruction : instr list(*; expression : isexpr*)}
+and block = {instruction : instr list; expression : isexpr}
 
 and ift = 
    If1 of expr*block 
@@ -47,9 +50,9 @@ and instr =
 
 type argument = {nom : mutident; typ : tipe}
 
-type dfun = {nom : ident; args : argument list; typ : tipe; bloc : block}
+type dfun = {nom : ident; args : argument list; typ : istipe; bloc : block}
 
-type dstruct = {nom : ident; struc : ident*tipe list}
+type dstruct = {nom : ident; struc : (ident*tipe) list}
 
 type decl = Dfun of  dfun | Dstruct of dstruct
 

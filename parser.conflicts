@@ -1,0 +1,200 @@
+
+** Conflict (shift/reduce) in state 125.
+** Tokens involved: VEC Tint TRUE PRINT MOINS LEFTPAR LEFTG IDENT FOIS FALSE EXCL ETMUT ET
+** The following explanations concentrate on token VEC.
+** This state is reached from fichier after reading:
+
+FN IDENT LEFTPAR list(argument) RIGHTPAR LEFTG instr 
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+fichier 
+list(decl) EOF 
+decl list(decl) 
+decl_fun 
+FN IDENT LEFTPAR list(argument) RIGHTPAR bloc 
+                                         (?)
+
+** In state 125, looking ahead at VEC, shifting is permitted
+** because of the following sub-derivation:
+
+LEFTG list(instr) expr RIGHTG 
+      instr list(instr) 
+            instr list(instr) 
+            expr ENDLINE 
+            . VEC EXCL LEFTC loption(separated_nonempty_list(COMMA,expr)) RIGHTC 
+
+** In state 125, looking ahead at VEC, reducing production
+** list(instr) -> 
+** is permitted because of the following sub-derivation:
+
+LEFTG list(instr) expr RIGHTG // lookahead token appears because expr can begin with VEC
+      instr list(instr) // lookahead token is inherited
+            . 
+
+** Conflict (shift/reduce) in state 76.
+** Tokens involved: SUPEGAL SUP POINT PLUS OR NOTEGAL MOINS MOD LEFTC INFEGAL INF FOIS EGAL DIVISE DBLEGAL AND
+** The following explanations concentrate on token SUPEGAL.
+** This state is reached from fichier after reading:
+
+FN IDENT LEFTPAR list(argument) RIGHTPAR LEFTG expr binaire expr 
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+fichier 
+list(decl) EOF 
+decl list(decl) 
+decl_fun 
+FN IDENT LEFTPAR list(argument) RIGHTPAR bloc 
+                                         LEFTG list(instr) expr RIGHTG 
+                                               instr list(instr) 
+                                               expr ENDLINE 
+                                               (?)
+
+** In state 76, looking ahead at SUPEGAL, shifting is permitted
+** because of the following sub-derivation:
+
+expr binaire expr 
+             expr binaire expr 
+                  . SUPEGAL 
+
+** In state 76, looking ahead at SUPEGAL, reducing production
+** expr -> expr binaire expr 
+** is permitted because of the following sub-derivation:
+
+expr binaire expr // lookahead token appears because binaire can begin with SUPEGAL
+expr binaire expr . 
+
+** Conflict (shift/reduce) in state 52.
+** Tokens involved: SUPEGAL SUP POINT PLUS OR NOTEGAL MOINS MOD LEFTC INFEGAL INF FOIS EGAL DIVISE DBLEGAL AND
+** The following explanations concentrate on token SUPEGAL.
+** This state is reached from fichier after reading:
+
+FN IDENT LEFTPAR list(argument) RIGHTPAR LEFTG unaire expr 
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+fichier 
+list(decl) EOF 
+decl list(decl) 
+decl_fun 
+FN IDENT LEFTPAR list(argument) RIGHTPAR bloc 
+                                         LEFTG list(instr) expr RIGHTG 
+                                               instr list(instr) 
+                                               expr ENDLINE 
+                                               (?)
+
+** In state 52, looking ahead at SUPEGAL, shifting is permitted
+** because of the following sub-derivation:
+
+unaire expr 
+       expr binaire expr 
+            . SUPEGAL 
+
+** In state 52, looking ahead at SUPEGAL, reducing production
+** expr -> unaire expr 
+** is permitted because of the following sub-derivation:
+
+expr binaire expr // lookahead token appears because binaire can begin with SUPEGAL
+unaire expr . 
+
+** Conflict (shift/reduce) in state 46.
+** Tokens involved: VEC Tint TRUE PRINT LEFTPAR LEFTG IDENT FALSE
+** The following explanations concentrate on token VEC.
+** This state is reached from fichier after reading:
+
+FN IDENT LEFTPAR list(argument) RIGHTPAR LEFTG FOIS 
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+fichier 
+list(decl) EOF 
+decl list(decl) 
+decl_fun 
+FN IDENT LEFTPAR list(argument) RIGHTPAR bloc 
+                                         LEFTG list(instr) expr RIGHTG 
+                                               instr list(instr) 
+                                               expr ENDLINE 
+                                               (?)
+
+** In state 46, looking ahead at VEC, shifting is permitted
+** because of the following sub-derivation:
+
+FOIS expr 
+     . VEC EXCL LEFTC loption(separated_nonempty_list(COMMA,expr)) RIGHTC 
+
+** In state 46, looking ahead at VEC, reducing production
+** unaire -> FOIS 
+** is permitted because of the following sub-derivation:
+
+unaire expr // lookahead token appears because expr can begin with VEC
+FOIS . 
+
+** Conflict (shift/reduce) in state 42.
+** Tokens involved: VEC Tint TRUE PRINT LEFTPAR LEFTG IDENT FALSE
+** The following explanations concentrate on token VEC.
+** This state is reached from fichier after reading:
+
+FN IDENT LEFTPAR list(argument) RIGHTPAR LEFTG MOINS 
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+fichier 
+list(decl) EOF 
+decl list(decl) 
+decl_fun 
+FN IDENT LEFTPAR list(argument) RIGHTPAR bloc 
+                                         LEFTG list(instr) expr RIGHTG 
+                                               instr list(instr) 
+                                               expr ENDLINE 
+                                               (?)
+
+** In state 42, looking ahead at VEC, shifting is permitted
+** because of the following sub-derivation:
+
+MOINS expr 
+      . VEC EXCL LEFTC loption(separated_nonempty_list(COMMA,expr)) RIGHTC 
+
+** In state 42, looking ahead at VEC, reducing production
+** unaire -> MOINS 
+** is permitted because of the following sub-derivation:
+
+unaire expr // lookahead token appears because expr can begin with VEC
+MOINS . 
+
+** Conflict (shift/reduce) in state 30.
+** Tokens involved: VEC Tint TRUE PRINT MOINS LEFTPAR LEFTG IDENT FOIS FALSE EXCL ETMUT ET
+** The following explanations concentrate on token VEC.
+** This state is reached from fichier after reading:
+
+FN IDENT LEFTPAR list(argument) RIGHTPAR LEFTG 
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+fichier 
+list(decl) EOF 
+decl list(decl) 
+decl_fun 
+FN IDENT LEFTPAR list(argument) RIGHTPAR bloc 
+                                         (?)
+
+** In state 30, looking ahead at VEC, shifting is permitted
+** because of the following sub-derivation:
+
+LEFTG list(instr) expr RIGHTG 
+      instr list(instr) 
+      expr ENDLINE 
+      . VEC EXCL LEFTC loption(separated_nonempty_list(COMMA,expr)) RIGHTC 
+
+** In state 30, looking ahead at VEC, reducing production
+** list(instr) -> 
+** is permitted because of the following sub-derivation:
+
+LEFTG list(instr) expr RIGHTG // lookahead token appears because expr can begin with VEC
+      . 
