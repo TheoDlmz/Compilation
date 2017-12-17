@@ -20,7 +20,7 @@
 %left PLUS MOINS
 %left FOIS DIVISE MOD
 %nonassoc EXCL ufois umoins ET ETMUT
-%nonassoc LEFTC RIGHTC
+%nonassoc LEFTC 
 %nonassoc POINT
 
 %start fichier
@@ -66,8 +66,13 @@ argument:
 ;
 
 bloc:
- |LEFTG l = list(instr)  e = expr  RIGHTG {{instruction = l; expression = Eexpr e}}
- |LEFTG l = list(instr) RIGHTG {{instruction = l; expression = None}}
+ LEFTG b = blockbody  RIGHTG {b }
+;
+
+blockbody:
+i = instr b = blockbody {B (i,b)}
+|i = instr  {I i}
+|e  = expr {E e}
 ;
 
 instr:
@@ -110,7 +115,10 @@ expr:
  |LEFTPAR e = expr RIGHTPAR {Cexpr e}
 ;
 
-binaire:
+
+
+
+%inline binaire:
  |DBLEGAL	{Equiv}
  |NOTEGAL	{Diff}
  |INF  		{Inf}
@@ -127,10 +135,8 @@ binaire:
  |EGAL		{Egal}
 ;
 
-unaire:
- |MOINS		{Neg}
+%inline unaire:
  |EXCL		{Not}
- |FOIS		{Star}
  |ET		{And}
  |ETMUT		{Mutand}
 ;
