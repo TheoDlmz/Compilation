@@ -9,6 +9,8 @@ let (genv : (string, unit) Hashtbl.t) = Hashtbl.create 17
 
 module Smap = Map.Make(String)
 
+let label_count = ref 0
+
 type local_env = ident Smap.t
 
 let rec alloc_expr env next = function
@@ -18,14 +20,48 @@ let rec alloc_expr env next = function
 let popn n = adds (imm n) (reg rsp)
 let pushn n = subs (imm n) (reg rsp)
 
-let rec compile_expr = function
+let rec compile_expr expr = label_count := !label_count + 1; match expr with
 	|Cint i -> pushq (imm i)
 	|Cbool b -> if b then pushq (imm 1) else pushq (imm 0)
 	|Binop (o,e1,e2) ->
-		compile_expr e1 ++
-		compile_expr e2 ++
-		popq rbx ++
-		popq rax ++
+		let code1 = compile_expr e1 in
+		let code2 = compile_expr e2 in
+		let label_string = string_of_int !label_count in
+		(match o with
+		  | (Inf |Infeg| Sup| Supeg) ->
+			let abr = (match op with
+				|Inf -> jl
+				|Infeg -> jle
+				|Sup -> jg
+				|Supeg -> jge) in
+			code1 ++
+			code2 ++
+			popq rbx ++
+			popq rax ++
+			cmpq (reg rbx) (reg rax) ++
+			abr ("l1_"^label_string) ++
+			pushq (imm 0) ++
+			jmp ("l0_"^label_string) ++
+			label ("l1_"^label_string) ++
+			pushq (imm 1) ++
+			label ("l0_"^label_string)
+		  | (Equiv |Diff) -> 
+		   	let abr = (match op with
+				|Equiv -> jz
+				|Diff -> jnz) in
+		  	code1 ++
+			code2 ++
+			popq rbx ++
+			popq rax ++
+			subq (reg rbx) (reg rax) ++
+			abr ("l1_"^label_string) ++
+			pushq (imm 0) ++
+			jmp ("l0_"^label_string) ++
+			label ("l1_"^label_string) ++
+			pushq (imm 1) ++
+			label ("l0_"^label_string)
+		 | (Add |Sub |Times|Div |And|Or|Mod) -> 
+		 code1 + code2 ++
 		(match o with
 			|Add -> addq (reg rbx) (reg rax)
 			|Sub -> subq (reg rbx) (reg rax)
