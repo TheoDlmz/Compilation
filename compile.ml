@@ -28,7 +28,6 @@ let rec compile_expr expr = label_count := !label_count + 1;
 	|Binop (o,e1,e2) ->
 		let code1 = compile_expr e1 in
 		let code2 = compile_expr e2 in
-		
 		(match o with
 		  | (Inf |Infeg| Sup| Supeg) ->
 			let abr = (match op with
@@ -98,7 +97,7 @@ and let rec compile_bloc = function
 	|EmptyBloc -> ()
 	|E e -> compile_expr e
 	|I i -> compile_instr i
-	|B (i,b) -> compile_instr i; compile_bloc b
+	|B (i,b) -> compile_instr i ++ compile_bloc b
 	
 and let rec compile_instr instr = label_count := !label_count + 1; 
 	let label_string = string_of_int !label_count in
@@ -111,11 +110,36 @@ and let rec compile_instr instr = label_count := !label_count + 1;
 		label ("w_deb_"^label_string) ++
 		compile_expr e ++
 		popq rax ++
+		testq (reg rax) (reg rax) ++
 		jz ("w_end_"^label_string) ++
 		compile_bloc b ++
 		jmp ("w_deb_"^label_string) ++
 		label ("w_end_"^label_string)
 	|Ireturn e ->
-	|Iif i -> 
+	|Iif i -> compile_if i
 	
+and let rec compile_if i = label_count := !label_count + 1; 
+	let label_string = string_of_int !label_count in
+	compile_expr e ++
+			popq rax ++
+			testq (reg rax) (reg rax) ++
+	(match i with
+	|If1 (e,b) -> 
+			jz ("if_end_"^label_string) ++
+			compile_bloc b ++
+			label ("if_end_"^label_string)
+	|If2 (e,b1,b2) -> 
+			jz ("if_else_"^label_string) ++
+			compile_bloc b1 ++
+			jmp ("if_end_"^label_string) ++
+			label ("if_else_"^label_string)  ++
+			compile_bloc b2 ++
+			label ("if_end_"^label_string) 
+	|If3 (e,b1,i2) -> 
+			jz ("if_else_"^label_string) ++
+			compile_bloc b1 ++
+			jmp ("if_end_"^label_string) ++
+			label ("if_else_"^label_string)  ++
+			compile_if i2 ++
+			label ("if_end_"^label_string))
 
