@@ -7,10 +7,10 @@
 %token <int> Tint
 %token <string> Tstring
 %token <Ast.ident> IDENT
-%token INF SUP EGAL PLUS MOINS FOIS DIVISE LEN 
+%token INF SUP EGAL PLUS MOINS FOIS DIVISE 
 %token MOD AND DBLEGAL NOTEGAL INFEGAL SUPEGAL 
 %token ET OR EXCL LEFTPAR RIGHTPAR TO ENDLINE ETMUT 
-%token POINT LEFTG RIGHTG LEFTC RIGHTC COMMA 
+%token POINT LEFTG RIGHTG LEFTC RIGHTC COMMA LEN  
 %token EOF
 
 %right EGAL
@@ -67,6 +67,7 @@ argument:
 
 bloc:
  LEFTG b = blockbody  RIGHTG {b }
+ | LEFTG RIGHTG { EmptyBloc}
 ;
 
 blockbody:
@@ -101,12 +102,12 @@ expr:
  |TRUE {Cbool true}
  |FALSE {Cbool false}
  |i = IDENT {Cident i}
- |e = expr b = binaire e2 = expr {Binop(b,e,e2)}
+ |e = expr b = binaire e2 = expr {Binop (b,e,e2)}
  |MOINS e = expr %prec umoins {Unop (Neg,e)}
  |FOIS e = expr %prec ufois {Unop (Star,e)}
  |u = unaire e = expr {Unop(u,e)}
  |e = expr POINT i = IDENT {Cselect (e,i)}
- |e = expr POINT LEN LEFTG RIGHTG {Clen e}
+ |e = expr POINT LEN LEFTPAR RIGHTPAR {Clen e}
  |e = expr LEFTC e2 = expr RIGHTC {Ctab(e,e2)}
  |i = IDENT LEFTPAR l = separated_list(COMMA,expr) RIGHTPAR {Ccall(i,l)}
  |VEC EXCL LEFTC l = separated_list(COMMA,expr) RIGHTC {Cvec l}
@@ -137,6 +138,6 @@ expr:
 
 %inline unaire:
  |EXCL		{Not}
- |ET		{And}
- |ETMUT		{Mutand}
+ |ET		{Ref}
+ |ETMUT		{MutRef}
 ;

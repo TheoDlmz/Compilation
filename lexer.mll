@@ -17,17 +17,12 @@ let keyword_list =
   "true", TRUE;
   "while", WHILE;
   "vec", VEC;
-  "print", PRINT]
+  "print", PRINT;
+   "len", LEN]
 
 
-type token = 
- |Tstring of string
- |Tint of int
- |Teof 
 }
-
-
-let chiffre = ['0'-'9']+
+let chiffre = ['0'-'9']
 let entier = chiffre+
 let alpha = ['a'-'z' 'A'-'Z']
 let ident = alpha(alpha|chiffre|'_')*
@@ -38,11 +33,10 @@ rule token = parse
  |['0'-'9']+ as i {Tint (int_of_string i)}
  |"//"  {comment_line lexbuf}
  |"/*" { multicomment lexbuf; token lexbuf}
- |'"' {Tstring (parse_string lexbuf); token lexbuf}
- |"len" {LEN}
- |ident as s {let s = Lexing.lexeme lexbuf in
-		try List.assoc s keywords
-		with Not_found -> IDENT s}
+ |'"' {Tstring (parse_string lexbuf)}
+ |ident as id {let s = Lexing.lexeme lexbuf in
+		try List.assoc s keyword_list
+		with Not_found -> IDENT id}
  |"<" {INF}
  |">" {SUP}
  |"=" {EGAL}
@@ -71,7 +65,7 @@ rule token = parse
  |"[" {LEFTC}
  |"]" {RIGHTC}
  |eof {EOF}
- |_ { raise Lexing_error "Illegal caracter at position : line "^string_of_int(lexbuf.lex_curr_p.pos_lnum)^"; column "^string_of_int(lexbuf.lex_curr_p.pos_cnum)}
+ |_ as r{ raise (Lexing_error  (Printf.sprintf "Illegal caracter %C at position : line %d; column %i" r lexbuf.lex_curr_p.pos_lnum lexbuf.lex_curr_p.pos_cnum))}
 
 and comment_line = parse
  |'\n' {token lexbuf}
@@ -79,17 +73,17 @@ and comment_line = parse
  | eof {EOF}
 
 and multicomment = parse
- |"*)" {()}
- |"(*" {multicomment lexbuf; multicomment lexbuf;}
+ |"*/" {()}
+ |"/*" {multicomment lexbuf; multicomment lexbuf;}
  |_ {multicomment lexbuf}
- |eof { raise Lexing_error "commentaire non terminé"}
+ |eof { raise (Lexing_error (Printf.sprintf "commentaire non terminé at position : line %d; column %i" lexbuf.lex_curr_p.pos_lnum lexbuf.lex_curr_p.pos_cnum))}
 
 and parse_string = parse
- |'"' {()}
+ |'"' {""}
  |"\\\\" {"\\"^(parse_string lexbuf)}
  |"\\n" {"\n"^(parse_string lexbuf)}
  |"\\\"" {"\""^(parse_string lexbuf)}
- |['\\' '"'] {raise Lexing_error "caractère illicite"}
- |_ as s {s^(parse_string lexbuf)}
- |eof {Lexing_error "chaîne de caractère non terminée"}
+ |['\\' '"'] {raise (Lexing_error  (Printf.sprintf "caractère illicite at position : line %d; column %i" lexbuf.lex_curr_p.pos_lnum lexbuf.lex_curr_p.pos_cnum))}
+ |_ as s {(String.make 1 s)^(parse_string lexbuf)}
+ |eof {raise (Lexing_error  (Printf.sprintf "chaîne de caractère non terminée at position : line %d; column %i" lexbuf.lex_curr_p.pos_lnum lexbuf.lex_curr_p.pos_cnum))}
 

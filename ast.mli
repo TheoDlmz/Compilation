@@ -7,13 +7,14 @@ type tipe =
  | Ttype of tipe
  | Ttypemut of tipe
 
+
 type istipe =
  None
  |T of tipe
 
 type bop = Equiv | Diff | Inf | Infeg | Sup | Supeg | Add | Sub | Times | Div | Mod | And | Or | Egal
 
-type uop = Neg | Not | Star | And | Mutand 
+type uop = Neg | Not | Star | Ref | MutRef
 
 type expr = 
    Cint of int 
@@ -32,7 +33,7 @@ type expr =
 
 and isexpr = None | Eexpr of expr
 
-and block = B of instr*block |I of instr |E of expr 
+and block = B of instr*block |I of instr |E of expr |EmptyBloc
 
 and ift = 
    If1 of expr*block 
