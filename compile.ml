@@ -5,17 +5,35 @@ open Ast
 
 exception VarUndef of string
 
-let (genv : (string, unit) Hashtbl.t) = Hashtbl.create 17
 
 module Smap = Map.Make(String)
 
 let label_count = ref 0
 
-type local_env = ident Smap.t
+
+type structs = (tipe Smap.t) Smap.t
+
+
+let structlist (i,t) S = Smap.add i t S
+
 
 let rec alloc_expr env next = function
-	()
+	|Cint i -> Cst i, next
+	|Cbool b -> Cbool b, next
+	|Cident x -> begin try 
+			let ofs_x = Smap.find x env in
+				Cident (ofs_x,,next
+		      with Not_found -> raise (VarUndef x)
+	|Binop(o,e1,e2) -> let e1,fpmax1 = alloc_expr env next e1 in
+				let e2,fpmax2 = alloc_expr env next e2 in
+				Binop(o,e1,e2), max fpmax1 fpmax2
+	|Unop(u,e1) -> let e1,fpmax1 = alloc_expr env next e1 in Unop(u,e1), fpmax1
+	|Cselect(e,x) -> let e,fpmax1 = alloc_expr env next e in (* verifier que x est bien dans la structure de e*)
+			 Cselect(e,x),fpmax1
+	|
 
+let alloc_struct env next struct =
+	Smap.add struct.nom (List.fold_left structlist Smap.empty) structs
 
 let popn n = adds (imm n) (reg rsp)
 let pushn n = subs (imm n) (reg rsp)
@@ -25,6 +43,7 @@ let rec compile_expr expr = label_count := !label_count + 1;
 		match expr with
 	|Cint i -> pushq (imm i)
 	|Cbool b -> if b then pushq (imm 1) else pushq (imm 0)
+	|Cident x ->
 	|Binop (o,e1,e2) ->
 		let code1 = compile_expr e1 in
 		let code2 = compile_expr e2 in
@@ -85,8 +104,13 @@ let rec compile_expr expr = label_count := !label_count + 1;
 	|Cselect (e,x) -> 
 	|Clen e -> compile_expr e++
 		   popq (reg rbx) ++
-		   movl (ind 8 rbx) (reg rax)
-	|Ctab (e1,e2) ->
+		   movl (ind ~ofs:8 rbx) (reg rax)
+	|Ctab (e1,e2) -> compile_expr e2 ++
+			 compile_expr e1 ++
+			 popq rax ++
+			 movl (ind ~ofs:16 rax) (reg rbx) ++
+			 
+			 
 	|Ccall (x,l) ->
 	|Cvec l -> 
 	|Fprint s ->
@@ -143,3 +167,16 @@ and let rec compile_if i = label_count := !label_count + 1;
 			compile_if i2 ++
 			label ("if_end_"^label_string))
 
+let compile_fun df =
+
+
+
+let compile_decl d = match d with
+	|Dfun df -> compile_fun df
+	|Dstruct ds -> ()
+
+
+
+let compile_program p ofile =
+	let p = alloc p in
+	let code = List.fold_left compile_stmt 
