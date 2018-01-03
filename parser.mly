@@ -82,8 +82,8 @@ instr:
  |LET b = boption(MUT) i = IDENT EGAL e = expr ENDLINE {Iinit ((b,i),e)}
  |LET b = boption(MUT) i = IDENT EGAL j = IDENT LEFTG l = separated_list(COMMA,sous_instr) RIGHTG ENDLINE {IinitS ((b,i),j,l)}
  |WHILE e = expr b = bloc {Iwhile (e,b)}
- |RETURN ENDLINE {Ireturn None}
- |RETURN e = expr ENDLINE {Ireturn (Eexpr e)}
+ |RETURN ENDLINE {Iend}
+ |RETURN e = expr ENDLINE {Ireturn e}
  |i = ifb {Iif i}
 ;
 
