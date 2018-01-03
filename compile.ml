@@ -148,6 +148,7 @@ and let rec compile_instr instr = label_count := !label_count + 1;
 		compile_bloc b ++
 		jmp ("w_deb_"^label_string) ++
 		label ("w_end_"^label_string)
+	|Iend -> pushq (imm 0) (reg rax) ++ ret 
 	|Ireturn e -> compile_expr e ++ popq rax ++ ret
 	|Iif i -> compile_if i
 	
