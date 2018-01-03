@@ -101,7 +101,7 @@ let rec compile_expr expr = label_count := !label_count + 1;
 			   |Ref -> 
 			   |RefMut ->
 			   ) ++ pushq (reg rax)
-	|Cselect (e,x) -> 
+	|Cselect (e,x) -> (* e.x *)
 	|Clen e -> compile_expr e++
 		   popq (reg rbx) ++
 		   movl (ind ~ofs:8 rbx) (reg rax)
@@ -109,11 +109,11 @@ let rec compile_expr expr = label_count := !label_count + 1;
 			 compile_expr e1 ++
 			 popq rax ++
 			 movl (ind ~ofs:16 rax) (reg rbx) ++
+			 (* doit recuperer la taille du type des elems de e1 puis multiplier par e2 et le renvoyer *)
 			 
-			 
-	|Ccall (x,l) ->
-	|Cvec l -> 
-	|Fprint s ->
+	|Ccall (x,l) -> (*appel de fonction*)
+	|Cvec l -> let n = List.length l (* construit le vecteur l, n est son premier element et n*t l'espace alloué sur le tas *)
+	|Fprint s -> (* rajouter s dans le segment des données puis appeler print dessus *)
 	|Cbloc b -> compile_bloc b
 	|Cexpr e -> compile_expr e
 	
