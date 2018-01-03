@@ -31,8 +31,6 @@ type expr =
  | Cbloc of block 
  | Cexpr of expr
 
-and isexpr = None | Eexpr of expr
-
 and block = B of instr*block |I of instr |E of expr |EmptyBloc
 
 and ift = 
@@ -45,8 +43,9 @@ and instr =
  | Iexpr of expr 
  | Iinit of mutident*expr
  | IinitS of mutident*ident*((ident*expr) list) 
- | Iwhile of expr*block 
- | Ireturn of isexpr 
+ | Iwhile of expr*block
+ | Iend 
+ | Ireturn of expr
  | Iif of ift
 
 type argument = {nom : mutident; typ : tipe}
