@@ -7,10 +7,10 @@ type ident = string
 type mutident = bool*ident
 
 type tipe =
-   Tident of ident
- | Ttyid of ident*tipe
- | Ttype of tipe
- | Ttypemut of tipe
+   Tx of ident
+ | Tvec of ident*tipe
+ | Tref of tipe
+ | Trefmut of tipe
 
 
 type istipe = 

@@ -58,10 +58,10 @@ decl_fun:
 ;
 
 typ:
- |i = IDENT {Tident i}
- |i = IDENT INF t= typ SUP {Ttyid (i,t)}
- |ET t = typ {Ttype t}
- |ET MUT t = typ {Ttypemut t}
+ |i = IDENT {Tx i}
+ |i = IDENT INF t= typ SUP {Tvec (i,t)}
+ |ET t = typ {Tref t}
+ |ET MUT t = typ {Trefmut t}
 ;
 
 argument:
