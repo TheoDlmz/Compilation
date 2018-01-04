@@ -1,4 +1,9 @@
+type bop = Equiv | Diff | Inf | Infeg | Sup | Supeg | Add | Sub | Times | Div | Mod | And | Or | Egal
+
+type uop = Neg | Not | Star | Ref | MutRef
+
 type ident = string
+
 type mutident = bool*ident
 
 type tipe =
@@ -8,52 +13,55 @@ type tipe =
  | Ttypemut of tipe
 
 
-type istipe =
- None
+type istipe = 
+ |None
  |T of tipe
 
-type bop = Equiv | Diff | Inf | Infeg | Sup | Supeg | Add | Sub | Times | Div | Mod | And | Or | Egal
+type pexpr = {
+	pe_desc: pexpr_desc; pe_pos : Lexing.position * Lexing.position }
 
-type uop = Neg | Not | Star | Ref | MutRef
+and pexpr_desc = 
+   PEint of int 
+ | PEbool of bool 
+ | PEident of ident 
+ | PEbinop of bop*pexpr*pexpr 
+ | PEunop of uop*pexpr
+ | PEselect of pexpr*ident 
+ | PElen of pexpr 
+ | PEtab of pexpr*pexpr
+ | PEcall of ident*( pexpr list) 
+ | PEvec of (pexpr list) 
+ | PEprint of string 
+ | PEbloc of pblock 
+ | PEexpr of pexpr
 
-type expr = 
-   Cint of int 
- | Cbool of bool 
- | Cident of ident 
- | Binop of bop*expr*expr 
- | Unop of uop*expr
- | Cselect of expr*ident 
- | Clen of expr 
- | Ctab of expr*expr
- | Ccall of ident*( expr list) 
- | Cvec of (expr list) 
- | Fprint of string 
- | Cbloc of block 
- | Cexpr of expr
 
-and block = B of instr*block |I of instr |E of expr |EmptyBloc
+and pblock = B of pinstr*pblock |I of pinstr |E of pexpr |EmptyBloc
 
-and ift = 
-   If1 of expr*block 
- | If2 of expr*block*block 
- | If3 of expr*block*ift
+and pif = 
+   PIfThen of pexpr*pblock 
+ | PIfElse of pexpr*pblock*pblock 
+ | PIfElseIf of pexpr*pblock*pif
 
-and instr = 
-   Inone 
- | Iexpr of expr 
- | Iinit of mutident*expr
- | IinitS of mutident*ident*((ident*expr) list) 
- | Iwhile of expr*block
- | Iend 
- | Ireturn of expr
- | Iif of ift
+and pinstr = {pi_desc : pinstr_desc; pi_pos : Lexing.position * Lexing.position}
+
+and pinstr_desc = 
+   PInone 
+ | PIexpr of pexpr 
+ | PIinit of mutident*pexpr
+ | PIinitStruct of mutident*ident*((ident*pexpr) list) 
+ | PIwhile of pexpr*pblock 
+ | PIend
+ | PIreturn of pexpr 
+ | PIif of pif
 
 type argument = {nom : mutident; typ : tipe}
 
-type dfun = {nom : ident; args : argument list; typ : istipe; bloc : block}
+type pdfun = {nom : ident; args : argument list; typ : istipe; bloc : pblock}
 
-type dstruct = {nom : ident; struc : (ident*tipe) list}
+type pdstruct = {nom : ident; struc : (ident*tipe) list}
 
-type decl = Dfun of  dfun | Dstruct of dstruct
+type pdecl_desc = PDfun of  pdfun | PDstruct of pdstruct
 
-type fichier = decl list
+type pdecl = {pd_desc : pdecl_desc; pos : Lexing.position*Lexing.position}
+type pfichier = pdecl list

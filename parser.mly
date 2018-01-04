@@ -27,7 +27,7 @@
 (* déclaration des tokens *)
 (* précédences et associatiités *)
 (* points d'entrées *)
-%type <Ast.fichier> fichier
+%type <Ast.pfichier> fichier
 
 %%
 
@@ -36,14 +36,17 @@ fichier:
 ;
 
 decl:
- |df = decl_fun {Dfun df}
- |ds = decl_struct {Dstruct ds}
+ desc = decl_desc { {pd_desc = desc;pos = ($startpos,$endpos) }}
+;
+
+decl_desc:
+ |df = decl_fun {PDfun df}
+ |ds = decl_struct {PDstruct ds}
 ;
 
 decl_struct:
  STRUCT i = IDENT LEFTG l = separated_list(COMMA,decl_sous_struct) RIGHTG {{nom = i; struc = l}}
 ;
-
 
 decl_sous_struct:
  x = IDENT TO t = typ {(x,t)}
@@ -77,14 +80,18 @@ i = instr b = blockbody {B (i,b)}
 ;
 
 instr:
- |ENDLINE {Inone}
- |e = expr ENDLINE {Iexpr e}
- |LET b = boption(MUT) i = IDENT EGAL e = expr ENDLINE {Iinit ((b,i),e)}
- |LET b = boption(MUT) i = IDENT EGAL j = IDENT LEFTG l = separated_list(COMMA,sous_instr) RIGHTG ENDLINE {IinitS ((b,i),j,l)}
- |WHILE e = expr b = bloc {Iwhile (e,b)}
- |RETURN ENDLINE {Iend}
- |RETURN e = expr ENDLINE {Ireturn e}
- |i = ifb {Iif i}
+ desc = instr_desc { {pi_desc = desc;pi_pos = ($startpos, $endpos)} }
+;
+
+instr_desc:
+ |ENDLINE {PInone}
+ |e = expr ENDLINE {PIexpr e}
+ |LET b = boption(MUT) i = IDENT EGAL e = expr ENDLINE {PIinit ((b,i),e)}
+ |LET b = boption(MUT) i = IDENT EGAL j = IDENT LEFTG l = separated_list(COMMA,sous_instr) RIGHTG ENDLINE {PIinitStruct ((b,i),j,l)}
+ |WHILE e = expr b = bloc {PIwhile (e,b)}
+ |RETURN ENDLINE {PIend}
+ |RETURN e = expr ENDLINE {PIreturn e}
+ |i = ifb {PIif i}
 ;
 
 sous_instr:
@@ -92,28 +99,32 @@ sous_instr:
 ;
 
 ifb:
- |IF e = expr b = bloc {If1 (e,b)}
- |IF e = expr b = bloc ELSE b2 = bloc {If2 (e,b,b2)} 
- |IF e = expr b = bloc ELSE i = ifb {If3 (e,b,i)}
+ |IF e = expr b = bloc {PIfThen (e,b)}
+ |IF e = expr b = bloc ELSE b2 = bloc {PIfElse (e,b,b2)} 
+ |IF e = expr b = bloc ELSE i = ifb {PIfElseIf (e,b,i)}
 ;
 
 expr:
- |i = Tint {Cint i}
- |TRUE {Cbool true}
- |FALSE {Cbool false}
- |i = IDENT {Cident i}
- |e = expr b = binaire e2 = expr {Binop (b,e,e2)}
- |MOINS e = expr %prec umoins {Unop (Neg,e)}
- |FOIS e = expr %prec ufois {Unop (Star,e)}
- |u = unaire e = expr {Unop(u,e)}
- |e = expr POINT i = IDENT {Cselect (e,i)}
- |e = expr POINT LEN LEFTPAR RIGHTPAR {Clen e}
- |e = expr LEFTC e2 = expr RIGHTC {Ctab(e,e2)}
- |i = IDENT LEFTPAR l = separated_list(COMMA,expr) RIGHTPAR {Ccall(i,l)}
- |VEC EXCL LEFTC l = separated_list(COMMA,expr) RIGHTC {Cvec l}
- |PRINT EXCL LEFTPAR c = Tstring  RIGHTPAR {Fprint c}
- | b = bloc {Cbloc b}
- |LEFTPAR e = expr RIGHTPAR {Cexpr e}
+desc = expr_desc {{pe_desc = desc; pe_pos = ($startpos,$endpos)}}
+;
+
+expr_desc:
+ |i = Tint {PEint i}
+ |TRUE {PEbool true}
+ |FALSE {PEbool false}
+ |i = IDENT {PEident i}
+ |e = expr b = binaire e2 = expr {PEbinop (b,e,e2)}
+ |MOINS e = expr %prec umoins {PEunop (Neg,e)}
+ |FOIS e = expr %prec ufois {PEunop (Star,e)}
+ |u = unaire e = expr {PEunop(u,e)}
+ |e = expr POINT i = IDENT {PEselect (e,i)}
+ |e = expr POINT LEN LEFTPAR RIGHTPAR {PElen e}
+ |e = expr LEFTC e2 = expr RIGHTC {PEtab(e,e2)}
+ |i = IDENT LEFTPAR l = separated_list(COMMA,expr) RIGHTPAR {PEcall(i,l)}
+ |VEC EXCL LEFTC l = separated_list(COMMA,expr) RIGHTC {PEvec l}
+ |PRINT EXCL LEFTPAR c = Tstring  RIGHTPAR {PEprint c}
+ | b = bloc {PEbloc b}
+ |LEFTPAR e = expr RIGHTPAR {PEexpr e}
 ;
 
 
