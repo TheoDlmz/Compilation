@@ -1,3 +1,11 @@
+type typ =
+  | Tunit
+  | Ti32
+  | Tbool
+  | Tstruct of typ list
+  | Tvec of typ
+  | Tpointer of bool*typ
+  
 type bop = Equiv | Diff | Inf | Infeg | Sup | Supeg | Add | Sub | Times | Div | Mod | And | Or | Egal
 
 type uop = Neg | Not | Star | Ref | MutRef
@@ -64,4 +72,50 @@ type pdstruct = {nom : ident; struc : (ident*tipe) list}
 type pdecl_desc = PDfun of  pdfun | PDstruct of pdstruct
 
 type pdecl = {pd_desc : pdecl_desc; pos : Lexing.position*Lexing.position}
+
 type pfichier = pdecl list
+
+
+(*********)
+
+type texpr =
+   TEint of int * typ
+ | TEbool of bool * typ
+ | TEident of ident * typ
+ | TEbinop of bop*texpr*texpr * typ
+ | TEunop of uop*texpr* typ
+ | TEselect of texpr*ident * typ
+ | TElen of texpr * typ
+ | TEtab of texpr*texpr* typ
+ | TEcall of ident*( texpr list) * typ
+ | TEvec of (texpr list) * typ
+ | TEprint of string * typ
+ | TEbloc of tblock * typ
+ | TEexpr of texpr* typ
+
+
+and tblock = TB of tinstr*tblock | TI of tinstr | TE of texpr | TEmptyBloc
+
+and tif =
+   TIfThen of texpr*tblock
+ | TIfElse of texpr*tblock*tblock
+ | TIfElseIf of texpr*tblock*tif
+
+and tinstr =
+   TInone
+ | TIexpr of texpr
+ | TIinit of mutident*texpr
+ | TIinitStruct of mutident*ident*((ident*texpr) list)
+ | TIwhile of texpr*tblock
+ | TIend
+ | TIreturn of texpr
+ | TIif of tif
+
+type targument = {nom : mutident; typ : typ}
+
+type tdfun = {nom : ident; args : targument list; typ : typ; bloc : tblock}
+
+type tdstruct = {nom : ident; struc : (ident*typ) list}
+
+type tdecl = TDfun of  tdfun | TDstruct of tdstruct
+type tfichier = tdecl list
