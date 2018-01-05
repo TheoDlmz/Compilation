@@ -49,23 +49,27 @@ decl_struct:
 ;
 
 decl_sous_struct:
- x = IDENT TO t = typ {(x,t)}
+ x = IDENT TO t = tip {(x,t)}
 ;
 
 decl_fun:
  |FN i = IDENT LEFTPAR la = list(argument) RIGHTPAR b = bloc {{nom=i;args = la;typ = None; bloc = b}}
- |FN i = IDENT LEFTPAR la = list(argument) RIGHTPAR MOINS SUP t = typ b = bloc {{nom=i;args=la;typ = T t;bloc = b}}
+ |FN i = IDENT LEFTPAR la = list(argument) RIGHTPAR MOINS SUP t = tip b = bloc {{nom=i;args=la;typ = T t;bloc = b}}
 ;
 
-typ:
+tip:
+ t = tip_desc {{pt_desc = t;pt_pos = ($startpos,$endpos)}}
+;
+
+tip_desc:
  |i = IDENT {Tx i}
- |i = IDENT INF t= typ SUP {Tvec (i,t)}
- |ET t = typ {Tref t}
- |ET MUT t = typ {Trefmut t}
+ |i = IDENT INF t= tip SUP {Tvec (i,t)}
+ |ET t = tip {Tref t}
+ |ET MUT t = tip {Trefmut t}
 ;
 
 argument:
- b = boption(MUT) i = IDENT TO t = typ {{nom=(b,i);typ=t}}
+ b = boption(MUT) i = IDENT TO t = tip {{nom=(b,i);typ=t}}
 ;
 
 bloc:

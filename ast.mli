@@ -14,11 +14,15 @@ type ident = string
 
 type mutident = bool*ident
 
-type tipe =
+
+type tipe_desc =
    Tx of ident
  | Tvec of ident*tipe
  | Tref of tipe
  | Trefmut of tipe
+
+and tipe = { pt_desc : tipe_desc; pt_pos : Lexing.position*Lexing.position}
+
 
 
 type istipe = 
@@ -113,9 +117,9 @@ and tinstr =
 
 type targument = {nom : mutident; typ : typ}
 
-type tdfun = {nom : ident; args : targument list; typ : typ; bloc : tblock}
+type tdfun = {nom : ident; targs : targument list; typ : typ; bloc : tblock}
 
-type tdstruct = {nom : ident; struc : (ident*typ) list}
+type tdstruct = {nom : ident; tstruc : (ident*typ) list}
 
 type tdecl = TDfun of  tdfun | TDstruct of tdstruct
 type tfichier = tdecl list
