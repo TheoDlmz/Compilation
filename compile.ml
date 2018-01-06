@@ -102,11 +102,13 @@ let rec compile_expr expr = label_count := !label_count + 1;
 		pushq (imm i)
 	|Cbool b -> 
 		if b then pushq (imm 1) else pushq (imm 0)
-	|Cident (fp_x,size) -> let p = (size/8 - 1) in
+	|Cident (fp_x,size) -> let p = (size/8 - 1) and forcode = ref nop in begin
 		for i = 0 to p
 		do
-			pushq (ind ~ofs:(fp_x + i*8)  rbp) 
-		done
+			forcode := !forcode + pushq (ind ~ofs:(fp_x + i*8)  rbp) 
+		done; 
+		!forcode;
+		end
 	|Cbinop (o,e1,e2) ->
 		let code1 = compile_expr e1 in
 		let code2 = compile_expr e2 in
@@ -250,13 +252,27 @@ and let rec compile_if i = label_count := !label_count + 1;
 
 
 
-let compile_decl d = match d with
-	|Dfun df -> match df.nom with
-		"Main" -> (label "main" ++ compile_bloc df.bloc,nop)
+let compile_fun (df,fpmax) =
+	match df.nom with
+		"Main" -> (label "main" ++ pushq (reg rbp)
+					++ movq (reg rsp) (reg rbp)
+					++ compile_bloc df.bloc,
+			    nop)
 		|_ -> (* on recupere les arguments sur la pile blabla *)
-			(nop,label df.nom ++ compile_bloc df.bloc)
+			(nop, let forcode = ref nop and p = (fp.size/8 - 1) in begin
+				for i = 0 to
+			label df.nom ++
+			pushq (reg rbp) ++
+			movq (reg rsp) (reg rbp) ++
+			pushn fpmax ++
+			compile_bloc df.bloc++
+			
+			popq rax ++
+			popn fpmax ++
+			popq rbp ++
+			ret)
 			(* on désalloue la pile ou jspas quoi *)
-	|Dstruct ds -> (nop,nop) (**)
+
 
 
 
@@ -268,5 +284,10 @@ let compile_program p ofile =
 		movq (imm 0) (reg rax) ++
 		ret ++
 		codefuns;
-		data = 	!segment_donnes
-		
+		data = 	!segment_donnes  }
+in
+let f = open_out ofile in
+let fmt = formatter_of_out_channel f in
+X86_64.print_program fmt p;
+fprintf fmt "@?";
+close_out f
