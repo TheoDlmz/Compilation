@@ -25,7 +25,7 @@ let rec alloc_expr env next = function
 				let e2,fpmax2 = alloc_expr env next e2 in
 				Cbinop(o,e1,e2), max fpmax1 fpmax2
 	|TEunop(u,e1) -> let e1,fpmax1 = alloc_expr env next e1 in Cunop(u,e1), fpmax1
-	|TEselect(e,x,pos,size) -> let e,fpmax1 = alloc_expr env next e in  Cselect(e,x,pos,size),fpmax1
+	|TEselect(e,pos,size) -> let e,fpmax1 = alloc_expr env next e in  Cselect(e,pos,size),fpmax1
 	|TElen e -> let e,fpmax = alloc_expr env next e in Clen(e), fpmax
 	|TEtab (e1,e2,size) -> let e1,fpmax1 = alloc_expr env next e1 in
 				let e2,fpmax2 = alloc_expr env next e2 in
@@ -42,7 +42,7 @@ let rec alloc_expr env next = function
 				(Cvec ((List.rev l),size), fpmax
 	|TEprint s -> Cprint s
 	|TEbloc b -> let b, fpmax = alloc_bloc env next b in Cbloc b,fpmax
-	|TEexpr e -> let e, fpmax = alloc_expr env next e in Cexpr e,fpmax
+	|TEexpr e -> let e, fpmax = alloc_expr env next e in e,fpmax
 
 and rec alloc_bloc env next b = match b with
 	|TB (i,b) -> let i,fpmaxi,newenv = alloc_instr env next i in
@@ -58,12 +58,12 @@ and rec alloc_instr env next i = match i with
 	|TIinit (x, e, size) -> let e,fpmax = alloc_expr env next e in
 			 let next = next + size in
 			  CIinit (x, e, size),max fpmax next,(Smap.add x (-next) env)
-	|TIinitStruct (x, env, size) ->  let l, fpmax =
-      			List.fold_left  (fun (l, fpmax) (e,i,j) -> let e, fpmax' = alloc_expr env next e in
-         		 				(e,i,j)::l, max fpmax fpmax') 
-					([], next) l in
+	|TIinitStruct (x, env, size) ->  let newenv, fpmax =
+      			Smap.iter  (fun x (e,i,j) (s,fpmax) -> let e, fpmax' = alloc_expr env next e in
+         		 				 (Smap.add x (e,i,j) s, max fpmax fpmax')) 
+					(Smap.empty, next) l in
 				let next = next + size  in
-				CIinitStruct ( x, List.rev l,size),max fpmax next, (Smap.add x (-next) env)
+				CIinitStruct ( x, newenv,size),max fpmax next, (Smap.add x (-next) env)
 	|TIwhile (e,b) -> let e,fpmax1 = alloc_expr env next e in
 			  let b, fpmax2 = alloc_bloc env next b in
 			   CIwhile (e,b), max fpmax1 fpmax2,env
@@ -86,7 +86,7 @@ and rec alloc_if env next i = match i with
 
 
 let alloc_fun f = 
-	let b, fpmax = alloc_bloc (Smap.empty) 0 f.bloc in ((CDfun {nom = f.nom; targs = f.targs; cbloc = b}),fpmax)
+	let b, fpmax = alloc_bloc (Smap.empty) 0 f.bloc in ({nom = f.nom; targs = f.targs; lbloc = b},fpmax)
 
 let alloc fichier = List.map (alloc_fun) fichier
 
