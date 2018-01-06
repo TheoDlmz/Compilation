@@ -141,7 +141,7 @@ and tinstr =
  | TIreturn of texpr
  | TIif of tif
 
-type targument = {nom : ident; size: int}
+type targument = {nom : ident; arg_size: int}
 
 type tdfun = {nom : ident; targs : targument list; size:int;bloc : tblock}
 
@@ -164,8 +164,8 @@ type cexpr =
   |Cint of int
   |Cbool of bool
   |Cident of int*int
-  |Cbinop of binop*cexpr*cexpr
-  |Cunop of unop*cexpr
+  |Cbinop of bop*cexpr*cexpr
+  |Cunop of uop*cexpr
   |Cselect of cexpr*int*int
   |Clen of cexpr
   |Ctab of cexpr*cexpr*int
@@ -183,21 +183,18 @@ and cbloc =
  and cinstr =
   |CInone
   |CIexpr of cexpr
-  |CIinit of init*cexpr*int
-  |CIinitStruct of init*((cexpr*int (*position*)*int (*taille de e.x*)) Smap.t)*int (*taille totale*)
+  |CIinit of int*cexpr*int
+  |CIinitStruct of int*((cexpr*int (*position*)*int (*taille de e.x*)) Smap.t)*int (*taille totale*)
   |CIwhile of cexpr*cbloc
   |CIreturn of cexpr
   |CIend
-  |CIif oc cif
+  |CIif of cif
   
 and cif =
   |CifThen of cexpr*cbloc
   |CifElse of cexpr*cbloc*cbloc
   |CifElseIf of cexpr*cbloc*cif
-  
- let cfun = {nom : ident; targs: (int*int) list; size:int; lbloc : cbloc}
  
- let cfichier = cfun list
+type cfun = {nom : ident; cargs: (int*int) list; size:int; lbloc: cbloc}
  
- 
-
+type cfichier = cfun list
