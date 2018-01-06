@@ -183,8 +183,8 @@ and cbloc =
  and cinstr =
   |CInone
   |CIexpr of cexpr
-  |CIinit of ident*cexpr*int
-  |CIinitStruct of ident*((cexpr*int (*position*)*int (*taille de e.x*)) Smap.t)*int (*taille totale*)
+  |CIinit of init*cexpr*int
+  |CIinitStruct of init*((cexpr*int (*position*)*int (*taille de e.x*)) Smap.t)*int (*taille totale*)
   |CIwhile of cexpr*cbloc
   |CIreturn of cexpr
   |CIend
