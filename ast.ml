@@ -195,7 +195,7 @@ and cif =
   |CifElse of cexpr*cbloc*cbloc
   |CifElseIf of cexpr*cbloc*cif
   
- let cfun = {nom : ident; targs: targument list; size:int; lbloc : cbloc}
+ let cfun = {nom : ident; targs: (int*int) list; size:int; lbloc : cbloc}
  
  let cfichier = cfun list
  
