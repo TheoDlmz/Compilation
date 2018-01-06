@@ -57,13 +57,13 @@ and rec alloc_instr env next i = match i with
 	|TIexpr e -> let e,fpmax = alloc_expr env next e in CIexpr,fpmax
 	|TIinit (x, e, size) -> let e,fpmax = alloc_expr env next e in
 			 let next = next + size in
-			  CIinit (x, e, size),max fpmax next,(Smap.add x (-next) env)
+			  CIinit (-next, e, size),max fpmax next,(Smap.add x (-next) env)
 	|TIinitStruct (x, env, size) ->  let newenv, fpmax =
       			Smap.iter  (fun x (e,i,j) (s,fpmax) -> let e, fpmax' = alloc_expr env next e in
          		 				 (Smap.add x (e,i,j) s, max fpmax fpmax')) 
 					(Smap.empty, next) l in
 				let next = next + size  in
-				CIinitStruct ( x, newenv,size),max fpmax next, (Smap.add x (-next) env)
+				CIinitStruct ( -next, newenv,size),max fpmax next, (Smap.add x (-next) env)
 	|TIwhile (e,b) -> let e,fpmax1 = alloc_expr env next e in
 			  let b, fpmax2 = alloc_bloc env next b in
 			   CIwhile (e,b), max fpmax1 fpmax2,env
@@ -86,7 +86,7 @@ and rec alloc_if env next i = match i with
 
 
 let alloc_fun f = 
-	let env, next = (fun x (env, next) -> let next = next + 8 in
+	let env, next = (fun x (env, next) -> let next = next + x.size in
 			Smap.add x next env, next) f.targs (Smap.empty, 8) in
 		let b, fpmax = alloc_bloc env next f.bloc in ({nom = f.nom; targs = f.targs; lbloc = b},fpmax)
 
@@ -95,7 +95,8 @@ let alloc fichier = List.map (alloc_fun) fichier
 let popn n = adds (imm n) (reg rsp)
 let pushn n = subs (imm n) (reg rsp)
 
-let rec compile_expr expr = label_count := !label_count + 1; 
+let rec compile_expr expr = label_count := !label_count + 1;  
+(* Manque binop(egal), Select, Unop (star, ref, refMut), tab, call, vec *)
 	let label_string = string_of_int !label_count in
 		match expr with
 	|Cint i -> 
@@ -183,7 +184,7 @@ let rec compile_expr expr = label_count := !label_count + 1;
 				(*appel de fonction*) 
 				(* on mets tous les args dans la pile *) 
 				(* on desallou la pile *)
-	|Cvec l -> let n = List.length l
+	|Cvec (l,size) -> let n = List.length l
 			pushq (imm n)
 		    (* construit le vecteur l, n est son premier element et n*t l'espace alloué sur le tas *)
 	|Cprint s -> begin
@@ -202,13 +203,14 @@ and let rec compile_bloc = function
 	|CB (i,b) -> compile_instr i ++ compile_bloc b
 	
 and let rec compile_instr instr = label_count := !label_count + 1; 
+(* manque Init structure *)
 	let label_string = string_of_int !label_count in
 	match instr with
 	|CInone -> nop
 	|CIexpr e -> compile_expr e
 	|CIinit (ofs_x,e) -> compile_expr e ++ popq rax
 			++ movq (reg rax) (ind ~ofs:fp_x rbp)
-	|CIinitStruct (x,y,l) -> (* INIT STRUCT CHIANT *)
+	|CIinitStruct (x,env,size) -> (* INIT STRUCT CHIANT *)
 	|CIwhile (e,b) ->
 		label ("w_deb_"^label_string) ++
 		compile_expr e ++
@@ -253,6 +255,7 @@ and let rec compile_if i = label_count := !label_count + 1;
 
 
 let compile_fun (df,fpmax) =
+(* a refaire *)
 	match df.nom with
 		"Main" -> (label "main" ++ pushq (reg rbp)
 					++ movq (reg rsp) (reg rbp)
