@@ -1,16 +1,36 @@
+type ident = string
+
 type typ =
   | Tunit
   | Ti32
   | Tbool
-  | Tstruct of typ list
+  | Tstruct of (typ*ident) list
   | Tvec of typ
   | Tpointer of bool*typ
   
-type bop = Equiv | Diff | Inf | Infeg | Sup | Supeg | Add | Sub | Times | Div | Mod | And | Or | Egal
+type bop = 
+   Equiv 
+ | Diff 
+ | Inf
+ | Infeg
+ | Sup
+ | Supeg
+ | Add
+ | Sub
+ | Times
+ | Div
+ | Mod
+ | And
+ | Or
+ | Egal
 
-type uop = Neg | Not | Star | Ref | MutRef
+type uop = 
+   Neg 
+ | Not
+ | Star
+ | Ref
+ | MutRef
 
-type ident = string
 
 type mutident = bool*ident
 
@@ -29,8 +49,7 @@ type istipe =
  |None
  |T of tipe
 
-type pexpr = {
-	pe_desc: pexpr_desc; pe_pos : Lexing.position * Lexing.position }
+type pexpr = {	pe_desc: pexpr_desc; pe_pos : Lexing.position * Lexing.position }
 
 and pexpr_desc = 
    PEint of int 
@@ -48,7 +67,11 @@ and pexpr_desc =
  | PEexpr of pexpr
 
 
-and pblock = B of pinstr*pblock |I of pinstr |E of pexpr |EmptyBloc
+and pblock = 
+  B of pinstr*pblock
+ |I of pinstr
+ |E of pexpr
+ |EmptyBloc
 
 and pif = 
    PIfThen of pexpr*pblock 
@@ -98,7 +121,11 @@ type texpr =
  | TEexpr of texpr* typ
 
 
-and tblock = TB of tinstr*tblock | TI of tinstr | TE of texpr | TEmptyBloc
+and tblock = 
+   TB of tinstr*tblock
+ | TI of tinstr
+ | TE of texpr
+ | TEmptyBloc
 
 and tif =
    TIfThen of texpr*tblock
@@ -122,4 +149,5 @@ type tdfun = {nom : ident; targs : targument list; typ : typ; bloc : tblock}
 type tdstruct = {nom : ident; tstruc : (ident*typ) list}
 
 type tdecl = TDfun of  tdfun | TDstruct of tdstruct
+
 type tfichier = tdecl list
