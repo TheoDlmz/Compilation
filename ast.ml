@@ -143,7 +143,7 @@ and tinstr =
 
 type targument = {nom : ident; size: int}
 
-type tdfun = {nom : ident; targs : targument list; bloc : tblock}
+type tdfun = {nom : ident; targs : targument list; size:int;bloc : tblock}
 
 (* Probablement mettre dans le typer : type tdstruct = {nom : ident; tstruct : (int(*position*)*int(*size*)) Smap.t; tsize : int}
 *)
@@ -195,7 +195,7 @@ and cif =
   |CifElse of cexpr*cbloc*cbloc
   |CifElseIf of cexpr*cbloc*cif
   
- let cfun = {nom : ident; targs: targument list, lbloc : cbloc}
+ let cfun = {nom : ident; targs: targument list; size:int; lbloc : cbloc}
  
  let cfichier = cfun list
  
