@@ -7,7 +7,6 @@ type varstate =
   | Full
   | Borrowed of bool
 
-
 type bop = 
    Equiv 
  | Diff 
@@ -108,14 +107,14 @@ type pfichier = pdecl list
 type texpr =
    TEint of int 
  | TEbool of bool
- | TEident of ident * int (*on veut la taille de l'ident*)
+ | TEident of ident*int (*on veut la taille de l'ident*)
  | TEbinop of bop*texpr*texpr
  | TEunop of uop*texpr
- | TEselect of texpr*int (*position*)*int (*size*)
+ | TEselect of texpr*int(*position*)*int(*size*)
  | TElen of texpr
- | TEtab of texpr*texpr*int (* taille des elements du tableau*)
+ | TEtab of texpr*texpr*int(*taille des elements du tableau*)
  | TEcall of ident*( texpr list)
- | TEvec of (texpr list)*int (*taille des elements du tableau *)
+ | TEvec of (texpr list)*int(*taille des elements du tableau*)
  | TEprint of string 
  | TEbloc of tblock
  | TEexpr of texpr
@@ -135,8 +134,8 @@ and tif =
 and tinstr =
    TInone
  | TIexpr of texpr
- | TIinit of ident*texpr*int (* taille de x*)
- | TIinitStruct of ident*((texpr*int (*position*)*int (*taille de e.x*)) Smap.t)*int (*taille totale*)
+ | TIinit of ident*texpr*int (*taille de x*)
+ | TIinitStruct of ident*((texpr*int(*position*)*int(*taille de e.x*)) Smap.t)*int (*taille totale*)
  | TIwhile of texpr*tblock
  | TIend
  | TIreturn of texpr
@@ -164,7 +163,7 @@ Pareil pour les tableaux et les idents en eux memes !*)
 type cexpr =
   |Cint of int
   |Cbool of bool
-  |Cident of ident*int
+  |Cident of int*int
   |Cbinop of binop*cexpr*cexpr
   |Cunop of unop*cexpr
   |Cselect of cexpr*int*int
