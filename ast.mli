@@ -1,5 +1,10 @@
 type ident = string
 
+type varstate = 
+  | Empty
+  | Full
+  | Borrowed of bool
+
 type typ =
   | Tunit
   | Ti32
