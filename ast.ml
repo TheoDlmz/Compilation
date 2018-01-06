@@ -111,7 +111,7 @@ type texpr =
  | TEident of ident * int (*on veut la taille de l'ident*)
  | TEbinop of bop*texpr*texpr
  | TEunop of uop*texpr
- | TEselect of texpr*ident*int (*position*)*int (*size*)
+ | TEselect of texpr*int (*position*)*int (*size*)
  | TElen of texpr
  | TEtab of texpr*texpr*int (* taille des elements du tableau*)
  | TEcall of ident*( texpr list)
@@ -157,3 +157,48 @@ et comme on les ecrit pas dans le code X86 j'en ai pas besoin moi, j'ai juste be
     je les empiles correctement sur le tas
   - Une selection peugeot.passager, il me faut la taille et la position de l'expression "passager" comme ça je le récupère direct
 Pareil pour les tableaux et les idents en eux memes !*)
+
+
+(**********************************)
+
+type cexpr =
+  |Cint of int
+  |Cbool of bool
+  |Cident of ident*int
+  |Cbinop of binop*cexpr*cexpr
+  |Cunop of unop*cexpr
+  |Cselect of cexpr*int*int
+  |Clen of cexpr
+  |Ctab of cexpr*cexpr*int
+  |Ccall of ident*(cexpr list)
+  |Cvec of (cexpr list)*int
+  |Cprint of string
+  |Cbloc of cbloc
+  
+and cbloc =
+  |CB of cinstr*cbloc
+  |CI of cinstr
+  |CE of cexpr
+  |CEmptyBloc
+ 
+ and cinstr =
+  |CInone
+  |CIexpr of cexpr
+  |CIinit of ident*cexpr*int
+  |CIinitStruct of ident*((cexpr*int (*position*)*int (*taille de e.x*)) Smap.t)*int (*taille totale*)
+  |CIwhile of cexpr*cbloc
+  |CIreturn of cexpr
+  |CIend
+  |CIif oc cif
+  
+and cif =
+  |CifThen of cexpr*cbloc
+  |CifElse of cexpr*cbloc*cbloc
+  |CifElseIf of cexpr*cbloc*cif
+  
+ let cfun = {nom : ident; targs: targument list, lbloc : cbloc}
+ 
+ let cfichier = cfun list
+ 
+ 
+
