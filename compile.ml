@@ -86,7 +86,9 @@ and rec alloc_if env next i = match i with
 
 
 let alloc_fun f = 
-	let b, fpmax = alloc_bloc (Smap.empty) 0 f.bloc in ({nom = f.nom; targs = f.targs; lbloc = b},fpmax)
+	let env, next = (fun x (env, next) -> let next = next + 8 in
+			Smap.add x next env, next) f.targs (Smap.empty, 8) in
+		let b, fpmax = alloc_bloc env next f.bloc in ({nom = f.nom; targs = f.targs; lbloc = b},fpmax)
 
 let alloc fichier = List.map (alloc_fun) fichier
 
@@ -96,10 +98,16 @@ let pushn n = subs (imm n) (reg rsp)
 let rec compile_expr expr = label_count := !label_count + 1; 
 	let label_string = string_of_int !label_count in
 		match expr with
-	|Cint i -> pushq (imm i)
-	|Cbool b -> if b then pushq (imm 1) else pushq (imm 0)
-	|Cident fp_x -> pushq (ind ~ofs:fp_x rbp)
-	|Binop (o,e1,e2) ->
+	|Cint i -> 
+		pushq (imm i)
+	|Cbool b -> 
+		if b then pushq (imm 1) else pushq (imm 0)
+	|Cident (fp_x,size) -> let p = (size/8 - 1) in
+		for i = 0 to p
+		do
+			pushq (ind ~ofs:(fp_x + i*8)  rbp) 
+		done
+	|Cbinop (o,e1,e2) ->
 		let code1 = compile_expr e1 in
 		let code2 = compile_expr e2 in
 		(match o with
@@ -147,8 +155,8 @@ let rec compile_expr expr = label_count := !label_count + 1;
 			|Mod -> cqto ++ idivq (reg rbx)
 				++ movq (reg rdx) (reg rax))
 		++ pushq (reg rax)
-		|Egal -> (* WTFUCKKKKKKKKKKKKKKKKKKKKKK *)
-	|Unop (u,e) -> compile_expr e ++ popq rax ++
+		|Egal -> (*hardcore sa mere*)
+	|Cunop (u,e) -> compile_expr e ++ popq rax ++
 			(match u with
 			   |Neg -> negq (reg rax)
 			   |Not -> notq (reg rax)
@@ -156,19 +164,27 @@ let rec compile_expr expr = label_count := !label_count + 1;
 			   |Ref -> 
 			   |RefMut ->
 			   ) ++ pushq (reg rax)
-	|Cselect (e,x) -> (* e.x  chiaaaaanttt *)
+	|Cselect (e,i,i) -> compile_expr e ++
 	|Clen e -> compile_expr e++
-		   popq (reg rbx) ++
+		   popq rbx ++
 		   movl (ind ~ofs:8 rbx) (reg rax)
-	|Ctab (e1,e2) -> compile_expr e2 ++
+	|Ctab (e1,e2,size) -> compile_expr e2 ++
 			 compile_expr e1 ++
-			 popq rax ++
-			 movl (ind ~ofs:16 rax) (reg rbx) ++
+			 popq rax ++ (*taille = inutile *)
+			 popq rax ++ (*adresse des elements *)
+			 popq rbx ++ (* # de l'élement *) 
 			 (* doit recuperer la taille du type des elems de e1 puis multiplier par e2 et le renvoyer *)
 			 
-	|Ccall (x,l) -> (*appel de fonction*) (* on mets tous les args dans la pile *) ++ call x ++ (* on desallou la pile *)
-	|Cvec l -> let n = List.length l (* construit le vecteur l, n est son premier element et n*t l'espace alloué sur le tas *)
-	|Fprint s -> begin
+	|Ccall (f,l) -> 
+		List.fold_left (fun code e -> code ++ compile_expr e) nop l ++
+				call f ++ popn (8*List.length l) ++ pushq (reg rax)
+				(*appel de fonction*) 
+				(* on mets tous les args dans la pile *) 
+				(* on desallou la pile *)
+	|Cvec l -> let n = List.length l
+			pushq (imm n)
+		    (* construit le vecteur l, n est son premier element et n*t l'espace alloué sur le tas *)
+	|Cprint s -> begin
 			string_count := !string_count + 1;
 			segment_donnes := !segment_donnes ++ label ("chaine_"^string_of_int(string_count)) ++ string (s(*^"\\n"*));
 			mov (imm s) (reg rdi) ++
@@ -176,23 +192,22 @@ let rec compile_expr expr = label_count := !label_count + 1;
 			call printf
 		      end
 	|Cbloc b -> compile_bloc b
-	|Cexpr e -> compile_expr e
 	
 and let rec compile_bloc = function
-	|EmptyBloc -> nop
-	|E e -> compile_expr e
-	|I i -> compile_instr i
-	|B (i,b) -> compile_instr i ++ compile_bloc b
+	|CEmptyBloc -> nop
+	|CE e -> compile_expr e
+	|CI i -> compile_instr i
+	|CB (i,b) -> compile_instr i ++ compile_bloc b
 	
 and let rec compile_instr instr = label_count := !label_count + 1; 
 	let label_string = string_of_int !label_count in
 	match instr with
-	|Inone -> nop
-	|Iexpr e -> compile_expr e
-	|Iinit (ofs_x,e) -> compile_expr e ++ popq rax
+	|CInone -> nop
+	|CIexpr e -> compile_expr e
+	|CIinit (ofs_x,e) -> compile_expr e ++ popq rax
 			++ movq (reg rax) (ind ~ofs:fp_x rbp)
-	|IinitS (x,y,l) -> (* INIT STRUCT CHIANT *)
-	|Iwhile (e,b) ->
+	|CIinitStruct (x,y,l) -> (* INIT STRUCT CHIANT *)
+	|CIwhile (e,b) ->
 		label ("w_deb_"^label_string) ++
 		compile_expr e ++
 		popq rax ++
@@ -201,9 +216,9 @@ and let rec compile_instr instr = label_count := !label_count + 1;
 		compile_bloc b ++
 		jmp ("w_deb_"^label_string) ++
 		label ("w_end_"^label_string)
-	|Iend -> pushq (imm 0) (reg rax) ++ ret 
-	|Ireturn e -> compile_expr e ++ popq rax ++ ret
-	|Iif i -> compile_if i
+	|CIend -> movq (imm 0) (reg rax) ++ ret 
+	|CIreturn e -> compile_expr e ++ popq rax ++ ret
+	|CIif i -> compile_if i
 	
 and let rec compile_if i = label_count := !label_count + 1; 
 	let label_string = string_of_int !label_count in
