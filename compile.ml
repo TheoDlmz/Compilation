@@ -58,10 +58,10 @@ and rec alloc_instr env next i = match i with
 	|TIinit (x, e, size) -> let e,fpmax = alloc_expr env next e in
 			 let next = next + size in
 			  CIinit (-next, e, size),max fpmax next,(Smap.add x (-next) env)
-	|TIinitStruct (x, env, size) ->  let newenv, fpmax =
+	|TIinitStruct (x, structenv, size) ->  let newenv, fpmax =
       			Smap.iter  (fun x (e,i,j) (s,fpmax) -> let e, fpmax' = alloc_expr env next e in
          		 				 (Smap.add x (e,i,j) s, max fpmax fpmax')) 
-					(Smap.empty, next) l in
+					(Smap.empty, next) structenv in
 				let next = next + size  in
 				CIinitStruct ( -next, newenv,size),max fpmax next, (Smap.add x (-next) env)
 	|TIwhile (e,b) -> let e,fpmax1 = alloc_expr env next e in
@@ -203,14 +203,26 @@ and let rec compile_bloc = function
 	|CB (i,b) -> compile_instr i ++ compile_bloc b
 	
 and let rec compile_instr instr = label_count := !label_count + 1; 
-(* manque Init structure *)
+
 	let label_string = string_of_int !label_count in
 	match instr with
 	|CInone -> nop
 	|CIexpr e -> compile_expr e
-	|CIinit (ofs_x,e) -> compile_expr e ++ popq rax
-			++ movq (reg rax) (ind ~ofs:fp_x rbp)
-	|CIinitStruct (x,env,size) -> (* INIT STRUCT CHIANT *)
+	|CIinit (fp_x,e,size) -> let forcode = ref nop and p = (size/8 - 1) in begin
+				for i = 0 to p do
+					forcode := !forcode ++ popq rax ++ movq (reg rax) (ind ~ofs:(fp_x +8*(p-i)) rbp)
+				done ;
+				compile_expr e ++ !forcode;
+				end
+	|CIinitStruct (fp_x,structenv,size) -> let forcode = Smap.iter (fun x (e,x_pos,x_size) precode -> let forcodebis = ref nop 
+					and pbis = (x_size/8-1) in begin
+					for i = 0 to pbis do
+						forcodebis := !forcodebis ++ popq rax ++ 
+						movq (reg rax) (ind ~ofs:(fp_x + x_pos + 8*(p-i)) rbp)
+					done;
+					precode ++ compile_expr e ++ !forcode 
+					) nop structenv in
+				forcode
 	|CIwhile (e,b) ->
 		label ("w_deb_"^label_string) ++
 		compile_expr e ++
