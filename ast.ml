@@ -156,4 +156,4 @@ et comme on les ecrit pas dans le code X86 j'en ai pas besoin moi, j'ai juste be
   - Une initialisation de structure let x = voiture {passager = 4; garanti= true} : il me faut la taille de chaque expression comme ça
     je les empiles correctement sur le tas
   - Une selection peugeot.passager, il me faut la taille et la position de l'expression "passager" comme ça je le récupère direct
-Pareil pour les tableaux et les idents en eux memes !
+Pareil pour les tableaux et les idents en eux memes !*)
