@@ -86,9 +86,9 @@ and rec alloc_if env next i = match i with
 
 
 let alloc_fun f = 
-	let env, next = (fun x (env, next) -> let next = next + x.size in
-			Smap.add x next env, next) f.targs (Smap.empty, 8) in
-		let b, fpmax = alloc_bloc env next f.bloc in ({nom = f.nom; targs = f.targs; lbloc = b},fpmax)
+	let env, next, l = List.fold_left (fun x (env, next, largs) -> let next = next + x.size in
+			(Smap.add x next env, next, (-next,x.size)::largs) f.targs (Smap.empty, 8) in
+		let b, fpmax = alloc_bloc env next f.bloc in ({nom = f.nom; targs = List.rev l; lbloc = b},fpmax)
 
 let alloc fichier = List.map (alloc_fun) fichier
 
