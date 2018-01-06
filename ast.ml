@@ -144,7 +144,7 @@ and tinstr =
 
 type targument = {nom : ident; size: int}
 
-type tdfun = {nom : ident; targs : targument list; return_size: int; bloc : tblock}
+type tdfun = {nom : ident; targs : targument list; bloc : tblock}
 
 (* Probablement mettre dans le typer : type tdstruct = {nom : ident; tstruct : (int(*position*)*int(*size*)) Smap.t; tsize : int}
 *)
