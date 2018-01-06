@@ -10,10 +10,6 @@ module Smap = Map.Make(String)
 
 let label_count = ref 0
 
-let structs = ref Smap.empty
-
-let structlist (i,t) S = Smap.add i t S
-
 let segment_donnes = ref nop
 
 let string_count = ref 0
@@ -29,11 +25,11 @@ let rec alloc_expr env next = function
 				let e2,fpmax2 = alloc_expr env next e2 in
 				Cbinop(o,e1,e2), max fpmax1 fpmax2
 	|TEunop(u,e1) -> let e1,fpmax1 = alloc_expr env next e1 in Cunop(u,e1), fpmax1
-	|TEselect(e,x) -> let e,fpmax1 = alloc_expr env next e in  Cselect(e,x),fpmax1
+	|TEselect(e,x,pos,size) -> let e,fpmax1 = alloc_expr env next e in  Cselect(e,x,pos,size),fpmax1
 	|TElen e -> let e,fpmax = alloc_expr env next e in Clen(e), fpmax
-	|TEtab (e1,e2) -> let e1,fpmax1 = alloc_expr env next e1 in
+	|TEtab (e1,e2,size) -> let e1,fpmax1 = alloc_expr env next e1 in
 				let e2,fpmax2 = alloc_expr env next e2 in
-				Ctab(o,e1,e2), max fpmax1 fpmax2
+				Ctab(e1,e2,size), max fpmax1 fpmax2
 	|TEcall (x,l) -> let l, fpmax =
       			List.fold_left  (fun (l, fpmax) e -> let e, fpmax' = alloc_expr env next e in
          		 				e::l, max fpmax fpmax') 
@@ -62,12 +58,12 @@ and rec alloc_instr env next i = match i with
 	|TIinit (x, e, size) -> let e,fpmax = alloc_expr env next e in
 			 let next = next + size in
 			  CIinit (x, e, size),max fpmax next,(Smap.add x (-next) env)
-	|TIinitStruct (x, l) ->  let l, fpmax =
-      			List.fold_left  (fun (l, fpmax) (y,e) -> let e, fpmax' = alloc_expr env next e in
-         		 				(y,e)::l, max fpmax fpmax') 
+	|TIinitStruct (x, env, size) ->  let l, fpmax =
+      			List.fold_left  (fun (l, fpmax) (e,i,j) -> let e, fpmax' = alloc_expr env next e in
+         		 				(e,i,j)::l, max fpmax fpmax') 
 					([], next) l in
-				let next = next + snd(Smap.find x !structs)  in
-				CIinitStruct ( x, List.rev l),max fpmax next, (Smap.add x (-next) env)
+				let next = next + size  in
+				CIinitStruct ( x, List.rev l,size),max fpmax next, (Smap.add x (-next) env)
 	|TIwhile (e,b) -> let e,fpmax1 = alloc_expr env next e in
 			  let b, fpmax2 = alloc_bloc env next b in
 			   CIwhile (e,b), max fpmax1 fpmax2,env
@@ -88,17 +84,11 @@ and rec alloc_if env next i = match i with
 				 let i,fpmaxi = alloc_if env next i in
 				  CifElseIf(e,b,i), max (max fpmaxb fpmaxe) fpmaxi
 
-let alloc_struct struct =
-	structs := Smap.add struct.nom (struct.tstruct,struct.tsize) !structs
 
 let alloc_fun f = 
 	let b, fpmax = alloc_bloc (Smap.empty) 0 f.bloc in ((CDfun {nom = f.nom; targs = f.targs; cbloc = b}),fpmax)
 
-let alloc_decl d = match d with
-	|TDstruct s -> alloc_struct s; (CDstruct s, 0)
-	|TDfun f -> alloc_fun f
-
-let alloc fichier = List.map (alloc_decl) fichier
+let alloc fichier = List.map (alloc_fun) fichier
 
 let popn n = adds (imm n) (reg rsp)
 let pushn n = subs (imm n) (reg rsp)
