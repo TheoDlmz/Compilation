@@ -108,14 +108,14 @@ type pfichier = pdecl list
 type texpr =
    TEint of int 
  | TEbool of bool
- | TEident of ident * int
+ | TEident of ident * int (*on veut la taille de l'ident*)
  | TEbinop of bop*texpr*texpr
  | TEunop of uop*texpr
- | TEselect of texpr*ident
+ | TEselect of texpr*ident*int (*position*)*int (*size*)
  | TElen of texpr
- | TEtab of texpr*texpr
+ | TEtab of texpr*texpr*int (* taille des elements du tableau*)
  | TEcall of ident*( texpr list)
- | TEvec of (texpr list)*int
+ | TEvec of (texpr list)*int (*taille des elements du tableau *)
  | TEprint of string 
  | TEbloc of tblock
  | TEexpr of texpr
@@ -135,8 +135,8 @@ and tif =
 and tinstr =
    TInone
  | TIexpr of texpr
- | TIinit of ident*texpr*int
- | TIinitStruct of ident*((texpr*int(*position*)) Smap.t)*int (*taille totale*)
+ | TIinit of ident*texpr*int (* taille de x*)
+ | TIinitStruct of ident*((texpr*int (*position*)*int (*taille de e.x*)) Smap.t)*int (*taille totale*)
  | TIwhile of texpr*tblock
  | TIend
  | TIreturn of texpr
@@ -146,8 +146,14 @@ type targument = {nom : ident; size: int}
 
 type tdfun = {nom : ident; targs : targument list; return_size: int; bloc : tblock}
 
-type tdstruct = {nom : ident; tstruct : (int(*position*)*int(*size*)) Smap.t; tsize : int}
-
+(* Probablement mettre dans le typer : type tdstruct = {nom : ident; tstruct : (int(*position*)*int(*size*)) Smap.t; tsize : int}
+*)
+(*
 type tdecl = TDfun of  tdfun | TDstruct of tdstruct
-
-type tfichier = tdecl list
+*)
+type tfichier = tdfun list (* En gros ton fichier c'est une liste de fonction car tu as verifié que les structutres étaient correctes
+et comme on les ecrit pas dans le code X86 j'en ai pas besoin moi, j'ai juste besoin quand je rencontre :
+  - Une initialisation de structure let x = voiture {passager = 4; garanti= true} : il me faut la taille de chaque expression comme ça
+    je les empiles correctement sur le tas
+  - Une selection peugeot.passager, il me faut la taille et la position de l'expression "passager" comme ça je le récupère direct
+Pareil pour les tableaux et les idents en eux memes !
