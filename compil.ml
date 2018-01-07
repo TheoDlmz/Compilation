@@ -222,20 +222,23 @@ and compile_instr instr = label_count := !label_count + 1;
 	match instr with
 	|CInone -> nop,0
 	|CIexpr e -> fst(compile_expr e),0
-	|CIinit (fp_x,e,size) -> (let forcode = ref nop and p = (size/8 - 1) in begin
+	|CIinit (fp_x,e) -> (let (code,size) = compile_expr e in
+				(let forcode = ref nop and p = (size/8 - 1) in begin
 				for i = 0 to p do
 					forcode := !forcode ++ popq rax ++ movq (reg rax) (ind ~ofs:(fp_x +8*(p-i)) rbp)
 				done ;
-				compile_expr e ++ !forcode;
-				end
-	|CIinitStruct (fp_x,structenv,size) ->  Smap.fold (fun x (e,x_pos,x_size) precode -> let forcodebis = ref nop 
+				code ++ !forcode;
+				end),0
+	|CIinitStruct (fp_x,structenv,size) ->  (Smap.fold (fun x (e,x_pos) precode -> 
+					let (code,x_size) = compile_expr e in 
+					let forcodebis = ref nop 
 					and pbis = (x_size/8-1) in begin
 					for i = 0 to pbis do
 						forcodebis := !forcodebis ++ popq rax ++ 
 						movq (reg rax) (ind ~ofs:(fp_x + x_pos + 8*(pbis-i)) rbp)
 					done;
-					precode ++ compile_expr e ++ !forcodebis; 
-					end) structenv nop
+					precode ++ code ++ !forcodebis; 
+					end) structenv nop),0
 	|CIwhile (e,b) -> let (c,size) = compile_bloc b in
 		(label ("w_deb_"^label_string) ++
 		fst(compile_expr e) ++
