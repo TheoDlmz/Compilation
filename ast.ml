@@ -167,6 +167,7 @@ type cexpr =
   |Cident of int*int
   |Cbinop of bop*cexpr*cexpr
   |Cunop of uop*cexpr
+  |Cderef of uop*cexpr*int
   |Cselect of cexpr*int*int
   |Clen of cexpr
   |Ctab of cexpr*cexpr*int
