@@ -26,6 +26,7 @@ let rec alloc_expr env next = function
 				let e2,fpmax2 = alloc_expr env next e2 in
 				Cbinop(o,e1,e2), max fpmax1 fpmax2
 	|TEunop(u,e1) -> let e1,fpmax1 = alloc_expr env next e1 in Cunop(u,e1), fpmax1
+	|TEderef(u,e,i) -> let e,fpmax = alloc_expr env next e in Cderef(u,e,i), fpmax
 	|TEselect(e,pos,size) -> let e,fpmax1 = alloc_expr env next e in  Cselect(e,pos,size),fpmax1
 	|TElen e -> let e,fpmax = alloc_expr env next e in Clen(e), fpmax
 	|TEtab (e1,e2,size) -> let e1,fpmax1 = alloc_expr env next e1 in
@@ -97,7 +98,7 @@ let popn n = addq (imm n) (reg rsp)
 let pushn n = subq (imm n) (reg rsp)
 
 let rec compile_expr expr = label_count := !label_count + 1;  
-(* Manque binop(egal), Select, Unop (star, ref, refMut), tab, call, vec *)
+(* Manque : Select, Unop(ref (deref)),  call, vec *)
 	let label_string = string_of_int !label_count in
 		match expr with
 	|Cint i -> 
@@ -162,12 +163,17 @@ let rec compile_expr expr = label_count := !label_count + 1;
 				++ movq (reg rdx) (reg rax)
 			|_ -> failwith "impossible")
 		++ pushq (reg rax)),8
-		|Egal -> (let coderef,p1 = compile_expr (Cunop(Ref,e1)) in 
+		|Egal -> (let coderef,size = compile_expr (Cunop(Ref,e1)) in 
+				let p = (size/8 - 1) and forcode = ref nop in begin
+				for i = 0 to p
+				do
+					forcode := !forcode ++ popq rbx ++ pushq (ind ~ofs:(i*8)  rax) 
+				done; 
 				coderef ++
 				popq rax ++
 				code2 ++
-				popq rbx ++
-				nop),0)
+				!focode),0)
+				end
 	|Cunop (u,e) -> (match u with
 			|Neg|Not -> (fst(compile_expr e) ++ popq rax ++
 			(match u with
@@ -175,23 +181,47 @@ let rec compile_expr expr = label_count := !label_count + 1;
 			   |Not -> notq (reg rax)
 			   |_ -> failwith "erreur"
 			  ) ++ pushq (reg rax)),8
-			   |Star -> nop,0
-			   |Ref -> nop ,0
-			   |MutRef -> nop,0)
-			   
-	|Cselect (e,pos,size) -> (fst(compile_expr e) ++ nop),size
+			|Ref |MutRef ->  (* ici size est la taille de l'elemnt à l'adresse e*)
+				(match e with
+				|Cunop(Star,e1) -> nop,0 (* !!!!!!! *)
+				|Cident (fp_x,size) -> (movq (reg rbx) (reg rax) ++ addq (imm fp_x) (reg rax) ++ pushq (reg rax)),size
+				|Cselect (e1,pos,size) -> nop,size
+				|Ctab (e1,e2,size) -> 	(fst(compile_expr e1) ++ 
+							popq rax ++ 
+							popq rax ++ 
+							fst(compile_expr e2) ++ 
+							poq rbx ++
+							imulq (imm size/8) (reg rbx) ++
+							addq (reg rbx) (reg rax) ++
+							pushq (reg rax)),size
+				|_ -> failwith "nope"
+			)
+	|Cderef (u,e,size) -> 	let p = (size/8 - 1) and forcode = ref nop in begin
+				for i = 0 to p
+				do
+					forcode := !forcode ++ pushq (ind ~ofs:(i*8)  rax) 
+				done; 
+				fst(compile_expr e) ++ !forcode,size ;	
+				end
+	|Cselect (e,pos,size) -> let code,total_size = compile_expr e in (code ++ nop),size (* !!!!!!!!! *)
 	|Clen e -> (fst(compile_expr e) ++
 		   popq rbx ++
 		   movl (ind ~ofs:8 rbx) (reg rax) ++
 		   pushq (reg rax)),8
-	|Ctab (e1,e2,size) -> 
+	|Ctab (e1,e2,size) -> let p = (size/8 - 1) and forcode = ref nop in begin
+				for i = 0 to p
+				do
+					forcode := !forcode ++ pushq (ind ~ofs:(i*8)  rax) 
+				done; 
 			 (fst(compile_expr e2) ++
 			 fst(compile_expr e1) ++
 			 popq rax ++ (*taille = inutile *)
 			 popq rax ++ (*adresse des elements *)
-			 popq rbx ++ (* # de l'élement *) 
-			 (* doit recuperer la taille du type des elems de e1 puis multiplier par e2 et le renvoyer *)
-			nop ),size
+			 popq rbx ++ (* # de l'élement *)
+			 imulq (imm size/8) (reg rbx)
+			 addq (reg rbx) (reg rax) ++
+			 !forcode),size;
+			 end
 	|Ccall (f,l) -> 
 	(*	List.fold_left (fun code e -> code ++ 
 			fst(compile_expr e)) nop l ++
