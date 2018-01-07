@@ -199,7 +199,7 @@ let rec compile_expr expr = label_count := !label_count + 1;
 				(* on mets tous les args dans la pile *) 
 				(* on desallou la pile *)
 	|Cvec (l,size) -> let n = List.length l in
-			pushq (imm n) ++
+			pushq (imm n),16
 		    (* construit le vecteur l, n est son premier element et n*t l'espace alloué sur le tas *)
 	|Cprint s -> (begin
 			string_count := !string_count + 1;
