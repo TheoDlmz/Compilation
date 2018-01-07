@@ -58,10 +58,10 @@ and alloc_instr env next i = match i with
 	|TIexpr e -> let e,fpmax = alloc_expr env next e in CIexpr e,fpmax,env
 	|TIinit (x, e, size) -> let e,fpmax = alloc_expr env next e in
 			 let next = next + size in
-			  CIinit (-next, e, size),max fpmax next,(Smap.add x (-next) env)
-	|TIinitStruct (x, structenv, size) ->  let newenv, fpmax =
-      			Smap.fold (fun x (e,i,j) (s,fpmax) -> let e, fpmax' = alloc_expr env next e in
-         		 				 (Smap.add x (e,i,j) s, next)) 
+			  CIinit (-next, e),max fpmax next,(Smap.add x (-next) env)
+	|TIinitStruct (x, structenv,size) ->  let newenv, fpmax =
+      			Smap.fold (fun x (e,i) (s,fpmax) -> let e, fpmax' = alloc_expr env next e in
+         		 				 (Smap.add x (e,i) s, next)) 
 					structenv (Smap.empty, next)  in
 				let next = next + size  in
 				CIinitStruct ( -next, newenv,size),max fpmax next, (Smap.add x (-next) env)
@@ -89,7 +89,7 @@ and alloc_if env next i = match i with
 let alloc_fun f = 
 	let env, next, l = List.fold_left (fun (env, next, largs) x -> let next = next + x.arg_size in
 			(Smap.add x.nom next env, next, (-next,x.arg_size)::largs))  (Smap.empty, 8, []) (f.targs) in
-		let b, fpmax = alloc_bloc env next f.bloc in ({nom = f.nom; cargs = List.rev l;size = f.size; lbloc = b},fpmax)
+		let b, fpmax = alloc_bloc env next f.bloc in ({nom = f.nom; cargs = List.rev l; lbloc = b},fpmax)
 
 let alloc fichier = List.map (alloc_fun) fichier
 
@@ -162,13 +162,13 @@ let rec compile_expr expr = label_count := !label_count + 1;
 				++ movq (reg rdx) (reg rax)
 			|_ -> failwith "impossible")
 		++ pushq (reg rax)),8
-		|Egal -> (let coderef,p1 = compile_expr (Cunop(Ref,e)) in 
+		|Egal -> (let coderef,p1 = compile_expr (Cunop(Ref,e1)) in 
 				coderef ++
 				popq rax ++
 				code2 ++
 				popq rbx ++
-				nop),0
-	|Cunop (u,e) -> match u with
+				nop),0)
+	|Cunop (u,e) -> (match u with
 			|Neg|Not -> (fst(compile_expr e) ++ popq rax ++
 			(match u with
 			   |Neg -> negq (reg rax)
@@ -177,7 +177,7 @@ let rec compile_expr expr = label_count := !label_count + 1;
 			  ) ++ pushq (reg rax)),8
 			   |Star -> nop,0
 			   |Ref -> nop ,0
-			   |MutRef -> nop,0
+			   |MutRef -> nop,0)
 			   
 	|Cselect (e,pos,size) -> (fst(compile_expr e) ++ nop),size
 	|Clen e -> (fst(compile_expr e) ++
@@ -193,8 +193,9 @@ let rec compile_expr expr = label_count := !label_count + 1;
 			 (* doit recuperer la taille du type des elems de e1 puis multiplier par e2 et le renvoyer *)
 			nop ),size
 	|Ccall (f,l) -> 
-		List.fold_left (fun code e -> code ++ compile_expr e) nop l ++
-				call f ++ popn (8*List.length l) ++ pushq (reg rax)
+	(*	List.fold_left (fun code e -> code ++ 
+			fst(compile_expr e)) nop l ++
+				call f ++ popn (8*List.length l) ++ pushq (reg rax) *) nop,0
 				(*appel de fonction*) 
 				(* on mets tous les args dans la pile *) 
 				(* on desallou la pile *)
@@ -222,7 +223,7 @@ and compile_instr instr = label_count := !label_count + 1;
 	match instr with
 	|CInone -> nop,0
 	|CIexpr e -> fst(compile_expr e),0
-	|CIinit (fp_x,e) -> (let (code,size) = compile_expr e in
+	|CIinit (fp_x,e) -> let (code,size) = compile_expr e in
 				(let forcode = ref nop and p = (size/8 - 1) in begin
 				for i = 0 to p do
 					forcode := !forcode ++ popq rax ++ movq (reg rax) (ind ~ofs:(fp_x +8*(p-i)) rbp)
@@ -254,7 +255,7 @@ and compile_instr instr = label_count := !label_count + 1;
 	
 and compile_if i = label_count := !label_count + 1; 
 	let label_string = string_of_int !label_count in
-	(match i with
+	match i with
 	|CifThen (e,b) -> let (c,size) = compile_bloc b in
 	(fst(compile_expr e) ++
 			popq rax ++
@@ -262,8 +263,8 @@ and compile_if i = label_count := !label_count + 1;
 			jz ("if_end_"^label_string) ++
 			c ++
 			label ("if_end_"^label_string)),size
-	|CifElse (e,b1,b2) -> let (c1,size1) = compile_bloc b in
-				let (c2,size2) = compile_bloc b in
+	|CifElse (e,b1,b2) -> let (c1,size1) = compile_bloc b1 in
+				let (c2,size2) = compile_bloc b2 in
 	(fst(compile_expr e) ++
 			popq rax ++
 			testq (reg rax) (reg rax) ++
@@ -273,8 +274,8 @@ and compile_if i = label_count := !label_count + 1;
 			label ("if_else_"^label_string)  ++
 			c2 ++
 			label ("if_end_"^label_string)),size1
-	|CifElseIf (e,b1,i2) -> let c1,size1 = compile_bloc b in 
-	(compile_expr e ++
+	|CifElseIf (e,b1,i2) -> let c1,size1 = compile_bloc b1 in 
+	(fst(compile_expr e) ++
 			popq rax ++
 			testq (reg rax) (reg rax) ++
 			jz ("if_else_"^label_string) ++

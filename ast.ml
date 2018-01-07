@@ -134,7 +134,7 @@ and tif =
 and tinstr =
    TInone
  | TIexpr of texpr
- | TIinit of ident*texpr
+ | TIinit of ident*texpr*int
  | TIinitStruct of ident*((texpr*int(*position*)) Smap.t)*int (*taille totale*)
  | TIwhile of texpr*tblock
  | TIend
