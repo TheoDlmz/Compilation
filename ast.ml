@@ -134,8 +134,8 @@ and tif =
 and tinstr =
    TInone
  | TIexpr of texpr
- | TIinit of ident*texpr*int (*taille de x*)
- | TIinitStruct of ident*((texpr*int(*position*)*int(*taille de e.x*)) Smap.t)*int (*taille totale*)
+ | TIinit of ident*texpr
+ | TIinitStruct of ident*((texpr*int(*position*)) Smap.t)*int (*taille totale*)
  | TIwhile of texpr*tblock
  | TIend
  | TIreturn of texpr
@@ -143,7 +143,7 @@ and tinstr =
 
 type targument = {nom : ident; arg_size: int}
 
-type tdfun = {nom : ident; targs : targument list; size:int;bloc : tblock}
+type tdfun = {nom : ident; targs : targument list;bloc : tblock}
 
 (* Probablement mettre dans le typer : type tdstruct = {nom : ident; tstruct : (int(*position*)*int(*size*)) Smap.t; tsize : int}
 *)
