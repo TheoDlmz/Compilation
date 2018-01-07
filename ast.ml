@@ -183,8 +183,8 @@ and cbloc =
  and cinstr =
   |CInone
   |CIexpr of cexpr
-  |CIinit of int*cexpr*int
-  |CIinitStruct of int*((cexpr*int (*position*)*int (*taille de e.x*)) Smap.t)*int (*taille totale*)
+  |CIinit of int*cexpr
+  |CIinitStruct of int*((cexpr*int (*position*)) Smap.t)*int (*taille totale*)
   |CIwhile of cexpr*cbloc
   |CIreturn of cexpr
   |CIend
@@ -195,6 +195,6 @@ and cif =
   |CifElse of cexpr*cbloc*cbloc
   |CifElseIf of cexpr*cbloc*cif
  
-type cfun = {nom : ident; cargs: (int*int) list; size:int; lbloc: cbloc}
+type cfun = {nom : ident; cargs: (int*int) list;  lbloc: cbloc}
  
 type cfichier = cfun list
