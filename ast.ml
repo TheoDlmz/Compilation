@@ -109,7 +109,8 @@ type texpr =
  | TEbool of bool
  | TEident of ident*int (*on veut la taille de l'ident*)
  | TEbinop of bop*texpr*texpr
- | TEunop of uop*texpr
+ | TEunop of uop*texpr (* only neg, not et ref *)
+ | TEderef of uop*texpr*int (* size of *e *)
  | TEselect of texpr*int(*position*)*int(*size*)
  | TElen of texpr
  | TEtab of texpr*texpr*int(*taille des elements du tableau*)
