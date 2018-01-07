@@ -172,8 +172,8 @@ let rec compile_expr expr = label_count := !label_count + 1;
 				coderef ++
 				popq rax ++
 				code2 ++
-				!focode),0)
-				end
+				!forcode end),0)
+
 	|Cunop (u,e) -> (match u with
 			|Neg|Not -> (fst(compile_expr e) ++ popq rax ++
 			(match u with
@@ -190,11 +190,12 @@ let rec compile_expr expr = label_count := !label_count + 1;
 							popq rax ++ 
 							popq rax ++ 
 							fst(compile_expr e2) ++ 
-							poq rbx ++
-							imulq (imm size/8) (reg rbx) ++
+							popq rbx ++
+							imulq (imm (size/8)) (reg rbx) ++
 							addq (reg rbx) (reg rax) ++
 							pushq (reg rax)),size
-				|_ -> failwith "nope"
+				|_ -> failwith "nope")
+			|_ -> failwith "not deref"
 			)
 	|Cderef (u,e,size) -> 	let p = (size/8 - 1) and forcode = ref nop in begin
 				for i = 0 to p
@@ -218,7 +219,7 @@ let rec compile_expr expr = label_count := !label_count + 1;
 			 popq rax ++ (*taille = inutile *)
 			 popq rax ++ (*adresse des elements *)
 			 popq rbx ++ (* # de l'élement *)
-			 imulq (imm size/8) (reg rbx)
+			 imulq (imm (size/8)) (reg rbx) ++
 			 addq (reg rbx) (reg rax) ++
 			 !forcode),size;
 			 end
