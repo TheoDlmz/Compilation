@@ -101,22 +101,22 @@ let rec compile_expr expr = label_count := !label_count + 1;
 	let label_string = string_of_int !label_count in
 		match expr with
 	|Cint i -> 
-		pushq (imm i)
+		pushq (imm i),8
 	|Cbool b -> 
-		if b then pushq (imm 1) else pushq (imm 0)
+		(if b then pushq (imm 1) else pushq (imm 0)),8
 	|Cident (fp_x,size) -> let p = (size/8 - 1) and forcode = ref nop in begin
 		for i = 0 to p
 		do
 			forcode := !forcode ++ pushq (ind ~ofs:(fp_x + i*8)  rbp) 
 		done; 
-		!forcode;
+		!forcode,size ;
 		end
 	|Cbinop (o,e1,e2) ->
-		let code1 = compile_expr e1 in
-		let code2 = compile_expr e2 in
+		let code1,p1 = compile_expr e1 in
+		let code2,p2 = compile_expr e2 in
 		(match o with
 		  | (Inf |Infeg| Sup| Supeg) ->
-			let abr = (match o with
+			(let abr = (match o with
 				|Inf -> jl
 				|Infeg -> jle
 				|Sup -> jg
@@ -132,9 +132,9 @@ let rec compile_expr expr = label_count := !label_count + 1;
 			jmp ("l0_"^label_string) ++
 			label ("l1_"^label_string) ++
 			pushq (imm 1) ++
-			label ("l0_"^label_string)
+			label ("l0_"^label_string)),8
 		  | (Equiv |Diff) -> 
-		   	let abr = (match o with
+		   	(let abr = (match o with
 				|Equiv -> jz
 				|Diff -> jnz
 				|_-> failwith "impossible") in
@@ -148,11 +148,11 @@ let rec compile_expr expr = label_count := !label_count + 1;
 			jmp ("l0_"^label_string) ++
 			label ("l1_"^label_string) ++
 			pushq (imm 1) ++
-			label ("l0_"^label_string)
+			label ("l0_"^label_string)),8
 		 | (Add |Sub |Times|Div |And|Or|Mod) -> 
-		 code1 ++ code2 ++ popq rbx ++ popq rax ++
+		 (code1 ++ code2 ++ popq rbx ++ popq rax ++
 		(match o with
-			|Add -> addq (reg rbx) (reg rax)
+			|Add -> addq (reg rbx) (reg rax) 
 			|Sub -> subq (reg rbx) (reg rax)
 			|Times -> imulq (reg rbx) (reg rax)
 			|Div -> cqto ++ idivq (reg rbx)
@@ -161,27 +161,37 @@ let rec compile_expr expr = label_count := !label_count + 1;
 			|Mod -> cqto ++ idivq (reg rbx)
 				++ movq (reg rdx) (reg rax)
 			|_ -> failwith "impossible")
-		++ pushq (reg rax)
-		|Egal -> (*hardcore sa mere*) nop)
-	|Cunop (u,e) -> compile_expr e ++ popq rax ++
+		++ pushq (reg rax)),8
+		|Egal -> (let coderef,p1 = compile_expr (Cunop(Ref,e)) in 
+				coderef ++
+				popq rax ++
+				code2 ++
+				popq rbx ++
+				nop),0
+	|Cunop (u,e) -> match u with
+			|Neg|Not -> (fst(compile_expr e) ++ popq rax ++
 			(match u with
 			   |Neg -> negq (reg rax)
 			   |Not -> notq (reg rax)
-			   |Star -> nop
-			   |Ref -> nop
-			   |MutRef -> nop
-			   ) ++ pushq (reg rax)
-	|Cselect (e,i,j) -> compile_expr e ++ nop
-	|Clen e -> compile_expr e++
+			   |_ -> failwith "erreur"
+			  ) ++ pushq (reg rax)),8
+			   |Star -> nop,0
+			   |Ref -> nop ,0
+			   |MutRef -> nop,0
+			   
+	|Cselect (e,pos,size) -> (fst(compile_expr e) ++ nop),size
+	|Clen e -> (fst(compile_expr e) ++
 		   popq rbx ++
-		   movl (ind ~ofs:8 rbx) (reg rax)
-	|Ctab (e1,e2,size) -> compile_expr e2 ++
-			 compile_expr e1 ++
+		   movl (ind ~ofs:8 rbx) (reg rax) ++
+		   pushq (reg rax)),8
+	|Ctab (e1,e2,size) -> 
+			 (fst(compile_expr e2) ++
+			 fst(compile_expr e1) ++
 			 popq rax ++ (*taille = inutile *)
 			 popq rax ++ (*adresse des elements *)
 			 popq rbx ++ (* # de l'élement *) 
 			 (* doit recuperer la taille du type des elems de e1 puis multiplier par e2 et le renvoyer *)
-			nop 
+			nop ),size
 	|Ccall (f,l) -> 
 		List.fold_left (fun code e -> code ++ compile_expr e) nop l ++
 				call f ++ popn (8*List.length l) ++ pushq (reg rax)
@@ -189,30 +199,30 @@ let rec compile_expr expr = label_count := !label_count + 1;
 				(* on mets tous les args dans la pile *) 
 				(* on desallou la pile *)
 	|Cvec (l,size) -> let n = List.length l in
-			pushq (imm n)
+			pushq (imm n) ++
 		    (* construit le vecteur l, n est son premier element et n*t l'espace alloué sur le tas *)
-	|Cprint s -> begin
+	|Cprint s -> (begin
 			string_count := !string_count + 1;
 			segment_donnes := !segment_donnes ++ label ("chaine_"^string_of_int(!string_count)) ++ string (s(*^"\\n"*));
 			movq (ilab s) (reg rdi) ++
 			movq (imm 0) (reg rax) ++
 			call "printf"
-		      end
+		      end),0
 	|Cbloc b -> compile_bloc b
 	
 and compile_bloc = function
-	|CEmptyBloc -> nop
+	|CEmptyBloc -> nop,0
 	|CE e -> compile_expr e
 	|CI i -> compile_instr i
-	|CB (i,b) -> compile_instr i ++ compile_bloc b
+	|CB (i,b) -> let (c,size) = compile_bloc b in (fst(compile_instr i) ++ c),size
 	
 and compile_instr instr = label_count := !label_count + 1; 
 
 	let label_string = string_of_int !label_count in
 	match instr with
-	|CInone -> nop
-	|CIexpr e -> compile_expr e
-	|CIinit (fp_x,e,size) -> let forcode = ref nop and p = (size/8 - 1) in begin
+	|CInone -> nop,0
+	|CIexpr e -> fst(compile_expr e),0
+	|CIinit (fp_x,e,size) -> (let forcode = ref nop and p = (size/8 - 1) in begin
 				for i = 0 to p do
 					forcode := !forcode ++ popq rax ++ movq (reg rax) (ind ~ofs:(fp_x +8*(p-i)) rbp)
 				done ;
@@ -226,49 +236,50 @@ and compile_instr instr = label_count := !label_count + 1;
 					done;
 					precode ++ compile_expr e ++ !forcodebis; 
 					end) structenv nop
-	|CIwhile (e,b) ->
-		label ("w_deb_"^label_string) ++
-		compile_expr e ++
+	|CIwhile (e,b) -> let (c,size) = compile_bloc b in
+		(label ("w_deb_"^label_string) ++
+		fst(compile_expr e) ++
 		popq rax ++
 		testq (reg rax) (reg rax) ++
 		jz ("w_end_"^label_string) ++
-		compile_bloc b ++
+		c ++
 		jmp ("w_deb_"^label_string) ++
-		label ("w_end_"^label_string)
-	|CIend -> movq (imm 0) (reg rax) ++ ret 
-	|CIreturn e -> compile_expr e ++ popq rax ++ ret
+		label ("w_end_"^label_string)),size
+	|CIend -> (movq (imm 0) (reg rax) ++ ret),0
+	|CIreturn e -> let (c,size) = compile_expr e in (c ++ popq rax ++ ret),size
 	|CIif i -> compile_if i
 	
 and compile_if i = label_count := !label_count + 1; 
 	let label_string = string_of_int !label_count in
 	(match i with
-	|CifThen (e,b) -> 
-	compile_expr e ++
+	|CifThen (e,b) -> let (c,size) = compile_bloc b in
+	(fst(compile_expr e) ++
 			popq rax ++
 			testq (reg rax) (reg rax) ++
 			jz ("if_end_"^label_string) ++
-			compile_bloc b ++
-			label ("if_end_"^label_string)
-	|CifElse (e,b1,b2) -> 
-	compile_expr e ++
+			c ++
+			label ("if_end_"^label_string)),size
+	|CifElse (e,b1,b2) -> let (c1,size1) = compile_bloc b in
+				let (c2,size2) = compile_bloc b in
+	(fst(compile_expr e) ++
 			popq rax ++
 			testq (reg rax) (reg rax) ++
 			jz ("if_else_"^label_string) ++
-			compile_bloc b1 ++
+			c1 ++
 			jmp ("if_end_"^label_string) ++
 			label ("if_else_"^label_string)  ++
-			compile_bloc b2 ++
-			label ("if_end_"^label_string) 
-	|CifElseIf (e,b1,i2) -> 
-	compile_expr e ++
+			c2 ++
+			label ("if_end_"^label_string)),size1
+	|CifElseIf (e,b1,i2) -> let c1,size1 = compile_bloc b in 
+	(compile_expr e ++
 			popq rax ++
 			testq (reg rax) (reg rax) ++
 			jz ("if_else_"^label_string) ++
-			compile_bloc b1 ++
+			c1 ++
 			jmp ("if_end_"^label_string) ++
 			label ("if_else_"^label_string)  ++
-			compile_if i2 ++
-			label ("if_end_"^label_string))
+			fst(compile_if i2) ++
+			label ("if_end_"^label_string)),size1
 
 
 	
@@ -280,17 +291,18 @@ let compile_fun (codemain, codefuns) (df,fpmax) =
 	match df.nom with
 		"Main" -> (codemain ++ label "main" ++ pushq (reg rbp)
 					++ movq (reg rsp) (reg rbp)
-					++ compile_bloc df.lbloc,
+					++ fst(compile_bloc df.lbloc),
 			    codefuns)
 		|_ -> (* on recupere les arguments sur la pile blabla *)
 			(codemain, (*let forcode = ref nop and p = (fp.size/8 - 1) in begin
 				for i = 0 to*)
+			let codebloc,size = compile_bloc df.lbloc in
 			codefuns ++
 			label df.nom ++
 			pushq (reg rbp) ++
 			movq (reg rsp) (reg rbp) ++
 			pushn fpmax ++
-			compile_bloc df.lbloc++
+			codebloc ++
 			
 			popq rax ++
 			popn fpmax ++
