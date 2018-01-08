@@ -1,3 +1,4 @@
+
 type ident = string
 
 module Smap = Map.Make(String)
@@ -89,11 +90,11 @@ and pinstr_desc =
  | PIreturn of pexpr 
  | PIif of pif
 
-type argument = {nom : mutident; typ : tipe}
+type argument = {nom_arg : mutident; typ_arg : tipe}
 
-type pdfun = {nom : ident; args : argument list; typ : istipe; bloc : pblock}
+type pdfun = {nom_pfun : ident; arg_pfun : argument list; typ_pfun : istipe; bloc_pfun : pblock}
 
-type pdstruct = {nom : ident; struc : (ident*tipe) list}
+type pdstruct = {nom_pstruct : ident; val_pstruct : (ident*tipe) list}
 
 type pdecl_desc = PDfun of  pdfun | PDstruct of pdstruct
 
@@ -142,9 +143,9 @@ and tinstr =
  | TIreturn of texpr
  | TIif of tif
 
-type targument = {nom : ident; arg_size: int}
+type targument = {nom_targ : ident; size_targ: int}
 
-type tdfun = {nom : ident; targs : targument list;bloc : tblock}
+type tdfun = {nom_tfun : ident; arg_tfun : targument list;bloc_tfun : tblock}
 
 (* Probablement mettre dans le typer : type tdstruct = {nom : ident; tstruct : (int(*position*)*int(*size*)) Smap.t; tsize : int}
 *)
@@ -197,6 +198,6 @@ and cif =
   |CifElse of cexpr*cbloc*cbloc
   |CifElseIf of cexpr*cbloc*cif
  
-type cfun = {nom : ident; cargs: (int*int) list;  lbloc: cbloc}
+type cfun = {nom_cfun : ident; arg_cfun : (int*int) list;  bloc_cfun: cbloc}
  
 type cfichier = cfun list

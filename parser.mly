@@ -45,7 +45,7 @@ decl_desc:
 ;
 
 decl_struct:
- STRUCT i = IDENT LEFTG l = separated_list(COMMA,decl_sous_struct) RIGHTG {{nom = i; struc = l}}
+ STRUCT i = IDENT LEFTG l = separated_list(COMMA,decl_sous_struct) RIGHTG {{nom_pstruct = i; val_pstruct = l}}
 ;
 
 decl_sous_struct:
@@ -53,8 +53,8 @@ decl_sous_struct:
 ;
 
 decl_fun:
- |FN i = IDENT LEFTPAR la = list(argument) RIGHTPAR b = bloc {{nom=i;args = la;typ = None; bloc = b}}
- |FN i = IDENT LEFTPAR la = list(argument) RIGHTPAR MOINS SUP t = tip b = bloc {{nom=i;args=la;typ = T t;bloc = b}}
+ |FN i = IDENT LEFTPAR la = list(argument) RIGHTPAR b = bloc {{nom_pfun =i;arg_pfun = la;typ_pfun = None; bloc_pfun = b}}
+ |FN i = IDENT LEFTPAR la = list(argument) RIGHTPAR MOINS SUP t = tip b = bloc {{nom_pfun =i;arg_pfun =la;typ_pfun = T t;bloc_pfun = b}}
 ;
 
 tip:
@@ -69,7 +69,7 @@ tip_desc:
 ;
 
 argument:
- b = boption(MUT) i = IDENT TO t = tip {{nom=(b,i);typ=t}}
+ b = boption(MUT) i = IDENT TO t = tip {{nom_arg =(b,i);typ_arg=t}}
 ;
 
 bloc:
