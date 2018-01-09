@@ -1,10 +1,10 @@
 open Format
 open Lexing
 open Parser
+open Printer
 
-open Ast
 
-
+(****MAIN****)
 
 
 let parse_only = ref false 
@@ -26,13 +26,13 @@ let () =Arg.parse ["--parse_only",Arg.Set parse_only, "Lexer + Parser";
 			else if not(Filename.check_suffix s ".rs") 
 			then (Printf.printf "file must have .rs extension \n";exit 1) 
 			else file := s) ""
-
-let lexbuf = Lexing.from_channel (open_in !file)
 let () =
-try
-   let pass1 = Parser.fichier Lexer.token lexbuf in begin
-   (*	pprint pass1;*)
-   (*if not(!parse_only) then ((*
+try  (
+ let lexbuf = Lexing.from_channel (open_in !file) in
+ try
+    let pass1 = Parser.fichier Lexer.token lexbuf in begin
+    pprint pass1; 
+   (*if not(!parse_only) then (
 		let pass2 = Typer.program pass1 in
 		if not(!type_only) then (
 		let out = open_out ((Filename.chop_suffix !file ".rs")^".s") in
@@ -41,10 +41,10 @@ try
 			Format.fprintf fmt "@?";
 			close_out out;
 		)
-	*)) *)
+	)*) 
 	exit 0; end
-with 
-	|Lexer.Lexing_error c ->
+ with 
+ 	|Lexer.Lexing_error c ->
 		printpos (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf);
 		Printf.printf "lexical error : %s\n" c;
 		exit 1
@@ -52,4 +52,6 @@ with
 		printpos (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf);
 		Printf.printf "Syntax error\n";
 		exit 1
-
+) with  _ ->
+	Printf.printf "compiler error\n";
+exit 2

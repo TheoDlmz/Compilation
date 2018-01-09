@@ -45,16 +45,16 @@ decl_desc:
 ;
 
 decl_struct:
- STRUCT i = IDENT LEFTG l = separated_list(COMMA,decl_sous_struct) RIGHTG {{nom_pstruct = i; val_pstruct = l}}
+ STRUCT i = ident LEFTG l = separated_list(COMMA,decl_sous_struct) RIGHTG {{nom_pstruct = i; val_pstruct = l}}
 ;
 
 decl_sous_struct:
- x = IDENT TO t = tip {(x,t)}
+ x = ident TO t = tip {(x,t)}
 ;
 
 decl_fun:
- |FN i = IDENT LEFTPAR la = list(argument) RIGHTPAR b = bloc {{nom_pfun =i;arg_pfun = la;typ_pfun = None; bloc_pfun = b}}
- |FN i = IDENT LEFTPAR la = list(argument) RIGHTPAR MOINS SUP t = tip b = bloc {{nom_pfun =i;arg_pfun =la;typ_pfun = T t;bloc_pfun = b}}
+ |FN i = ident LEFTPAR la = separated_list(COMMA,argument) RIGHTPAR b = bloc {{nom_pfun =i;arg_pfun = la;typ_pfun = None; bloc_pfun = b}}
+ |FN i = ident LEFTPAR la = separated_list(COMMA,argument) RIGHTPAR MOINS SUP t = tip b = bloc {{nom_pfun =i;arg_pfun =la;typ_pfun = T t;bloc_pfun = b}}
 ;
 
 tip:
@@ -62,14 +62,14 @@ tip:
 ;
 
 tip_desc:
- |i = IDENT {Tx i}
- |i = IDENT INF t= tip SUP {Tvec (i,t)}
+ |i = ident {Tx i}
+ |i = ident INF t= tip SUP {Tvec (i,t)}
  |ET t = tip {Tref t}
- |ET MUT t = tip {Trefmut t}
+ |ETMUT t = tip {Trefmut t}
 ;
 
 argument:
- b = boption(MUT) i = IDENT TO t = tip {{nom_arg =(b,i);typ_arg=t}}
+ b = boption(MUT) i = ident TO t = tip {{nom_arg =(b,i);typ_arg=t}}
 ;
 
 bloc:
@@ -90,8 +90,8 @@ instr:
 instr_desc:
  |ENDLINE {PInone}
  |e = expr ENDLINE {PIexpr e}
- |LET b = boption(MUT) i = IDENT EGAL e = expr ENDLINE {PIinit ((b,i),e)}
- |LET b = boption(MUT) i = IDENT EGAL j = IDENT LEFTG l = separated_list(COMMA,sous_instr) RIGHTG ENDLINE {PIinitStruct ((b,i),j,l)}
+ |LET b = boption(MUT) i = ident EGAL e = expr ENDLINE {PIinit ((b,i),e)}
+ |LET b = boption(MUT) i = ident EGAL j = IDENT LEFTG l = separated_list(COMMA,sous_instr) RIGHTG ENDLINE {PIinitStruct ((b,i),j,l)}
  |WHILE e = expr b = bloc {PIwhile (e,b)}
  |RETURN ENDLINE {PIend}
  |RETURN e = expr ENDLINE {PIreturn e}
@@ -99,7 +99,7 @@ instr_desc:
 ;
 
 sous_instr:
- i = IDENT TO e = expr {i,e}
+ i = ident TO e = expr {i,e}
 ;
 
 ifb:
@@ -116,22 +116,25 @@ expr_desc:
  |i = Tint {PEint i}
  |TRUE {PEbool true}
  |FALSE {PEbool false}
- |i = IDENT {PEident i}
+ |i = ident {PEident i}
  |e = expr b = binaire e2 = expr {PEbinop (b,e,e2)}
  |MOINS e = expr %prec umoins {PEunop (Neg,e)}
  |FOIS e = expr %prec ufois {PEunop (Star,e)}
  |u = unaire e = expr {PEunop(u,e)}
- |e = expr POINT i = IDENT {PEselect (e,i)}
+ |e = expr POINT i = ident {PEselect (e,i)}
  |e = expr POINT LEN LEFTPAR RIGHTPAR {PElen e}
  |e = expr LEFTC e2 = expr RIGHTC {PEtab(e,e2)}
- |i = IDENT LEFTPAR l = separated_list(COMMA,expr) RIGHTPAR {PEcall(i,l)}
+ |i = ident LEFTPAR l = separated_list(COMMA,expr) RIGHTPAR {PEcall(i,l)}
  |VEC EXCL LEFTC l = separated_list(COMMA,expr) RIGHTC {PEvec l}
  |PRINT EXCL LEFTPAR c = Tstring  RIGHTPAR {PEprint c}
  | b = bloc {PEbloc b}
  |LEFTPAR e = expr RIGHTPAR {PEexpr e}
 ;
 
-
+ident:
+ |id = IDENT {id}
+ |PRINT  {"print"}
+;
 
 
 %inline binaire:

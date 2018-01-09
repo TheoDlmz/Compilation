@@ -1,5 +1,5 @@
-CMO=lexer.cmo parser.cmo main.cmo
-GENERATED = lexer.ml parser.ml parser.mli
+CMO= lexer.cmo parser.cmo printer.cmo main.cmo x86_64.cmo compil.cmo 
+GENERATED = lexer.ml printer.ml parser.ml parser.mli x86_64.ml compil.ml
 FLAGS=-annot -g
 
 
