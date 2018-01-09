@@ -200,9 +200,6 @@ let pushn n = subq (imm n) (reg rsp)
 
 
 
-
-
-
 (* COMPILE EXPRESSION : FAIT :D *)
 
 let rec compile_expr expr fpmax = label_count := !label_count + 1;  
@@ -233,7 +230,7 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
 		 |Infeg -> jle
 	         |Sup -> jg
 		 |Supeg -> jge
-		 |_ -> failwith "impossible") in
+		 |_ -> assert false) in
  	code1 ++
 	code2 ++
 	popq rbx ++
@@ -250,7 +247,7 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
      (let abr = (match o with
 	   	 |Equiv -> jz
 		 |Diff -> jnz
-	         |_-> failwith "impossible") in
+	         |_-> assert false) in
 	code1 ++
 	code2 ++
 	popq rbx ++
@@ -275,7 +272,7 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
 	|Div -> cqto ++ idivq (reg rbx)
 	|Mod -> cqto ++ idivq (reg rbx)
 		++ movq (reg rdx) (reg rax)
-	|_ -> failwith "impossible")
+	|_ -> assert false)
       ++ pushq (reg rax)),8
     |And -> 
 	(code1 ++
@@ -325,7 +322,7 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
     (match u with
      |Neg -> negq (reg rax)
      |Not -> notq (reg rax)
-     |_ -> failwith "erreur"
+     |_ -> assert false
      ) 
     ++ pushq (reg rax)),8
    |Ref |MutRef ->  
@@ -343,8 +340,8 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
        			   imulq (imm (size/8)) (reg rbx) ++
 			   addq (reg rbx) (reg rax) ++
 			   pushq (reg rax)),8
-     |_ -> failwith "not a good ref")
-    |_ -> failwith "not a good unary"
+     |_ -> assert false)
+    |_ -> assert false
 			)
  |Cderef (u,e,size) -> 	
    let p = (size/8 - 1) and forcode = ref nop in begin
@@ -359,20 +356,19 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
 
  |Cselect (e,pos,size) -> 
   let code,total_size = compile_expr e fpmax in
-  let movselect = ref nop and
-      popselect = ref nop in begin
+  let movselect = ref nop in begin
   for i = 0 to (size/8-1) do
       movselect := !movselect ++ 
 		   movq (ind ~ofs:(-total_size+pos+i*8) rsp) (reg rax) ++
 		   movq (reg rax) (ind ~ofs:(-total_size + i*8) rsp)
   done;
-  for i = 0 to ((total_size-size)/8 - 1) do
+  (*for i = 0 to ((total_size-size)/8 - 1) do
       popselect := !popselect ++
 		   popq (rax)
-  done;
+  done;*)
   code ++
   !movselect ++
-  !popselect, size;
+  popn (total_size-size), size;
   end
   (*let code,total_size = compile_expr e fpmax
 					and firstpop = ref nop 
