@@ -131,7 +131,9 @@ and alloc_instr env next i = match i with
       (Smap.add x (e,i) s, next)) 
               structenv (Smap.empty, next)  in
    let next = next + size  in
-     CIinitStruct ( -next, newenv,size),max fpmax next, (Smap.add x (-next) env)
+     CIinitStruct ( -next, newenv,size),
+		   max fpmax next, 
+		  (Smap.add x (-next) env)
 
  |TIwhile (e,b) -> 
    let e,fpmax1 = alloc_expr env next e in
@@ -409,19 +411,20 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
    end
 
  |Ccall (f,l) -> 
- 	(* On compile toutes les expressions *)
+ 	let (code_arg, size_arg) = List.fold_left(fun (code,size) e -> 
+		       let (code_e, size_e) = compile_expr e fpmax in
+		       (code ++ code_e, size + size_e))
+		      (nop,0) l 
+	and size_f = Hashtbl.find ret_fun f in
+	let pushcode = ref nop in begin
+	for i = 0 to (size_f/8 - 1) do
+		pushcode := !pushcode ++ pushq (ind ~ofs:(i*8) rdi)
+	done; 
 	call f ++
-	(* on popn la taille totale des expressions *)
-	(* on pushq tout ce qui y a dans rdi et rdi + Hashtbl.find f *)
-	(* on free le malloc *)
+	popn size_arg ++
+	!pushcode,size_f
+	(* on free le malloc *)end
 
-	(*	List.fold_left (fun code e -> code ++ 
-			fst(compile_expr e)) nop l ++
-				call f ++ popn (8*List.length l) ++ pushq (reg rax) *) nop,0
-				(*appel de fonction*) 
-				(* on mets tous les args dans la pile *) 
-				(* on desallou la pile *)
-	(* IDEE : On fait un Smap fun -> size_arg * size_return *)
  |Cvec (l,size) -> 
    let n = List.length l and 
        compilcode = ref nop and 
@@ -530,14 +533,20 @@ and compile_instr instr fpmax = label_count := !label_count + 1;
 
  |CIreturn e -> 
    let (c,size) = compile_expr e fpmax in 
-    (c ++ 
+     let ramcode = ref nop in begin
+     for i = 0 to (size/8 - 1) do
+	ramcode := !ramcode ++ 
+		     popq (rax) ++
+		     movq (reg rax) (ind ~ofs:(i*8) rdi)
+     done;
+     (c ++ 
      movq (imm size) (reg rax) ++
      call "malloc" ++
-     (* boucle for pour placer dans rdi *)
+     !ramcode ++
      popn fpmax ++
      popq rbp ++
      ret),0 (* est ce que je dois placer le resultats à une position particulière ou laisser la pile telle quelle ? *)
-
+     end
  |CIif i -> 
     compile_if i fpmax
 
@@ -592,37 +601,44 @@ let compile_fun (codemain, codefuns) (df,fpmax) =
                movq (reg rsp) (reg rbp) ++ 
 	       fst(compile_bloc df.bloc_cfun fpmax),
                codefuns)
-    |_ -> (* on recupere les arguments sur la pile blabla *)
-	(codemain, (*let forcode = ref nop and p = (fp.size/8 - 1) in begin
-				for i = 0 to*)
+    |_ -> 
+	(codemain, 
       	let codebloc,size = compile_bloc df.bloc_cfun fpmax 
-	and size_ret = Hashtbl.find ret_fun df.nom_cfun  in
-			codefuns ++
-			label df.nom_cfun ++
-			pushq (reg rbp) ++
-			movq (reg rsp) (reg rbp) ++
-			pushn fpmax ++
-			codebloc ++
-			movq (imm size_ret) (reg rax) ++
-			call "malloc" ++
-			(* La on place tout entre rdi et rdi + size_ret *)
-			popn fpmax ++
-			popq rbp ++
-			ret)
-			(* on désalloue la pile ou jspas quoi *)
+	and size_ret = Hashtbl.find ret_fun df.nom_cfun  
+	and retcode = ref nop in begin
+	 for i = 0 to (size_ret/8 - 1) do
+	    retcode := !retcode ++ 
+			popq rax ++
+			movq (reg rax) (ind ~ofs:(i*8) rdi)
+	 done;
+		codefuns ++
+		label df.nom_cfun ++
+		pushq (reg rbp) ++
+		movq (reg rsp) (reg rbp) ++
+		pushn fpmax ++
+		codebloc ++
+		movq (imm size_ret) (reg rax) ++
+		call "malloc" ++
+		!retcode ++
+		popn fpmax ++
+		popq rbp ++
+		ret
+	end)
 
 
 
 
 let compile_program f ofile =
 	let f = alloc f in
-	let (codemain, codefuns) = List.fold_left compile_fun  (nop, nop) f in
+	let (codemain, codefuns) = List.fold_left compile_fun  (nop, nop) f
+	 in
 		let p =
 		{ text = glabel "main" ++ codemain ++
 		movq (imm 0) (reg rax) ++
 		ret ++
 		codefuns;
 		data = 	!segment_donnes  }
+
 in
 let f = open_out ofile in
 let fmt = formatter_of_out_channel f in
