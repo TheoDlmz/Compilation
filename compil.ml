@@ -182,7 +182,8 @@ let alloc_fun f =
                     (Smap.empty, f.size_tfun, []) (f.arg_tfun) in
  let b, fpmax = alloc_bloc env 0 f.bloc_tfun in begin
    Hashtbl.add ret_fun f.nom_tfun f.size_tfun;
-   ({nom_cfun = f.nom_tfun; arg_cfun = List.rev l; bloc_cfun = b},fpmax);
+   ({nom_cfun = f.nom_tfun; arg_cfun = List.rev l; bloc_cfun = b},
+    (fpmax,(next-f.size_tfun)));
   end
 
 
@@ -306,7 +307,7 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
 	pushq (reg rbx)),8
     |Egal -> 
      (let coderef,size = compile_expr (Cunop(Ref,e1)) fpmax in 
-      let p = (size/8 - 1) and forcode = ref nop in begin
+      let p = (p2/8 - 1) and forcode = ref nop in begin
       for i = 0 to p
       do
 	forcode := popq rbx ++ movq (reg rbx) (ind ~ofs:(i*8)  rax) ++ !forcode 
@@ -327,13 +328,13 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
      |_ -> failwith "erreur"
      ) 
     ++ pushq (reg rax)),8
-   |Ref |MutRef ->  (* ici size est la taille de l'elemnt à l'adresse e*)
+   |Ref |MutRef ->  
     (match e with
      |Cderef(u,e1,size) -> compile_expr e1 fpmax
      |Cident (fp_x,size) -> (movq (reg rbp) (reg rax) ++ 
 			     addq (imm fp_x) (reg rax) ++ 
-			     pushq (reg rax)),size
-     |Cselect (e1,pos,size) -> nop,size
+			     pushq (reg rax)),8
+     |Cselect (e1,pos,size) -> nop,8
      |Ctab (e1,e2,size) -> (fst(compile_expr e1 fpmax) ++ 
 			   popq rax ++ 
 			   fst(compile_expr e2 fpmax) ++ 
@@ -341,7 +342,7 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
 			   popq rax ++ 
        			   imulq (imm (size/8)) (reg rbx) ++
 			   addq (reg rbx) (reg rax) ++
-			   pushq (reg rax)),size
+			   pushq (reg rax)),8
      |_ -> failwith "not a good ref")
     |_ -> failwith "not a good unary"
 			)
@@ -508,7 +509,7 @@ and compile_bloc bloc fpmax = match bloc with
 
 
 
-(* COMPILE INSTR : EN COURS... *)
+(* COMPILE INSTR : FAIT *)
 
 and compile_instr instr fpmax = label_count := !label_count + 1; 
 	let label_string = string_of_int !label_count in
@@ -517,13 +518,8 @@ and compile_instr instr fpmax = label_count := !label_count + 1;
    nop,0
 
  |CIexpr e -> 
-   let (code,size) = compile_expr e fpmax and forpop = ref nop in
-   begin
-   for i = 1 to (size/8) do
-	forpop := !forpop ++ popq rax
-   done;
-   code ++ !forpop,0
-   end 
+   let (code,size) = compile_expr e fpmax in  
+   code ++ popn size ,0
 
  |CIinit (fp_x,e) -> 
    let (code,size) = compile_expr e fpmax in
@@ -560,11 +556,32 @@ and compile_instr instr fpmax = label_count := !label_count + 1;
     testq (reg rax) (reg rax) ++
     jnz ("w_bloc_"^label_string)),0
  
- |CIend -> popn fpmax ++ popq rbp ++  
-    (movq (imm 0) (reg rax) ++ ret),0
+ |CIend -> 
+     popn (fst(fpmax)) ++ 
+     popq rbp ++  
+     movq (imm 0) (reg rax) ++ 
+     ret,0
 
  |CIreturn e -> 
-   let (c,size) = compile_expr e fpmax in 
+    let (c,size) = compile_expr e fpmax in
+    let retcode = ref nop 
+    and pos = snd(fpmax) in begin
+    for i = 0 to (size/8-1) do
+	retcode := !retcode ++ 
+		   popq rax ++
+		   movq (reg rax) (ind ~ofs:(pos + i*8) rbp)
+    done;
+    c ++
+    !retcode ++
+    popn (fst(fpmax)) ++
+    popq rbp ++
+    movq (imm 0) (reg rax) ++
+    ret,0;
+    end
+  
+
+
+  (* let (c,size) = compile_expr e fpmax in 
      let ramcode = ref nop in begin
      for i = 0 to (size/8 - 1) do
 	ramcode := !ramcode ++ 
@@ -577,12 +594,16 @@ and compile_instr instr fpmax = label_count := !label_count + 1;
      !ramcode ++
      popn fpmax ++
      popq rbp ++
-     ret),0 (* est ce que je dois placer le resultats à une position particulière ou laisser la pile telle quelle ? *)
+     ret),0 
      end
+ *)
  |CIif i -> 
     compile_if i fpmax
 
 
+
+
+(* COMPILE IF : FAIT *)
 	
 and compile_if i fpmax = label_count := !label_count + 1; 
 	let label_string = string_of_int !label_count in
@@ -623,42 +644,42 @@ and compile_if i fpmax = label_count := !label_count + 1;
 
 	
 
-
+(* COMPILE FUN : FINIS *)
 
 let compile_fun (codemain, codefuns) (df,fpmax) =
    match df.nom_cfun with
-    "Main" -> (codemain ++ 
-	       label "main" ++ 
-               pushq (reg rbp) ++
-               movq (reg rsp) (reg rbp) ++ 
-	       fst(compile_bloc df.bloc_cfun fpmax),
-               codefuns)
+    | "Main" -> 
+	(codemain ++ 
+         label "main" ++ 
+      	 pushq (reg rbp) ++
+      	 movq (reg rsp) (reg rbp) ++ 
+       	 fst(compile_bloc df.bloc_cfun fpmax),
+         codefuns)
     |_ -> 
 	(codemain, 
-      	let codebloc,size = compile_bloc df.bloc_cfun fpmax 
+      	let codebloc,size = compile_bloc df.bloc_cfun fpmax
 	and size_ret = Hashtbl.find ret_fun df.nom_cfun  
-	and retcode = ref nop in begin
+	and retcode = ref nop 
+	and pos = snd(fpmax) in begin
 	 for i = 0 to (size_ret/8 - 1) do
 	    retcode := !retcode ++ 
 			popq rax ++
-			movq (reg rax) (ind ~ofs:(i*8) rdi)
+			movq (reg rax) (ind ~ofs:(pos + i*8) rbp)
 	 done;
-		codefuns ++
-		label df.nom_cfun ++
-		pushq (reg rbp) ++
-		movq (reg rsp) (reg rbp) ++
-		pushn fpmax ++
-		codebloc ++
-		movq (imm size_ret) (reg rax) ++
-		call "malloc" ++
-		!retcode ++
-		popn fpmax ++
-		popq rbp ++
-		ret
+         codefuns ++
+	 label df.nom_cfun ++
+	 pushq (reg rbp) ++
+	 movq (reg rsp) (reg rbp) ++
+	 pushn (fst(fpmax)) ++
+	 codebloc ++
+	 !retcode ++
+	 popn (fst(fpmax)) ++
+	 popq rbp ++
+	 ret
 	end)
 
 
-
+(* COMPILE FILE : FINIS *)
 
 let compile_program f ofile =
 	let f = alloc f in
