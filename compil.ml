@@ -178,9 +178,9 @@ and alloc_if env next i = match i with
 let alloc_fun f = 
  let env, next, l = List.fold_left 
  		    (fun (env, next, largs) x -> let next = next + x.size_targ in
-		    (Smap.add x.nom_targ next env, next, (-next,x.size_targ)::largs))  
-                    (Smap.empty, 8, []) (f.arg_tfun) in
- let b, fpmax = alloc_bloc env next f.bloc_tfun in begin
+		    (Smap.add x.nom_targ next env, next, (next,x.size_targ)::largs))  
+                    (Smap.empty, f.size_tfun, []) (f.arg_tfun) in
+ let b, fpmax = alloc_bloc env 0 f.bloc_tfun in begin
    Hashtbl.add ret_fun f.nom_tfun f.size_tfun;
    ({nom_cfun = f.nom_tfun; arg_cfun = List.rev l; bloc_cfun = b},fpmax);
   end
@@ -202,10 +202,9 @@ let pushn n = subq (imm n) (reg rsp)
 
 
 
-
+(* COMPILE EXPRESSION : FAIT :D *)
 
 let rec compile_expr expr fpmax = label_count := !label_count + 1;  
-(* Manque :  call, *)
 	let label_string = string_of_int !label_count in
 		match expr with
  |Cint i -> 
@@ -310,7 +309,7 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
       let p = (size/8 - 1) and forcode = ref nop in begin
       for i = 0 to p
       do
-	forcode := !forcode ++ popq rbx ++ pushq (ind ~ofs:(i*8)  rax) 
+	forcode := popq rbx ++ movq (reg rbx) (ind ~ofs:(i*8)  rax) ++ !forcode 
       done; 
       code2 ++
       coderef ++
@@ -358,7 +357,23 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
    end
 
  |Cselect (e,pos,size) -> 
-   let code,total_size = compile_expr e fpmax
+  let code,total_size = compile_expr e fpmax in
+  let movselect = ref nop and
+      popselect = ref nop in begin
+  for i = 0 to (size/8-1) do
+      movselect := !movselect ++ 
+		   movq (ind ~ofs:(-total_size+pos+i*8) rsp) (reg rax) ++
+		   movq (reg rax) (ind ~ofs:(-total_size + i*8) rsp)
+  done;
+  for i = 0 to ((total_size-size)/8 - 1) do
+      popselect := !popselect ++
+		   popq (rax)
+  done;
+  code ++
+  !movselect ++
+  !popselect, size;
+  end
+  (*let code,total_size = compile_expr e fpmax
 					and firstpop = ref nop 
 				        and choose = ref nop 
 					and lastpop = ref nop 
@@ -385,8 +400,7 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
     !lastpop ++ 
     !pushcode 
     (*liberere la mémoire c'est cool *)
-    ),size
-   end
+    ),size *)
  
  |Clen e -> 
   (fst(compile_expr e fpmax) ++
@@ -411,7 +425,15 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
    end
 
  |Ccall (f,l) -> 
- 	let (code_arg, size_arg) = List.fold_left(fun (code,size) e -> 
+   let (code_arg, size_arg) = List.fold_left (fun (code,size) e -> 
+	let (code_e,size_e) = compile_expr e fpmax in
+	(code_e ++ code,size+size_e)) (nop,0) l
+   and size_f = Hashtbl.find ret_fun f in
+   pushn size_f ++
+   code_arg ++
+   call f ++
+   popn size_arg, size_f
+ 	(*let (code_arg, size_arg) = List.fold_left(fun (code,size) e -> 
 		       let (code_e, size_e) = compile_expr e fpmax in
 		       (code ++ code_e, size + size_e))
 		      (nop,0) l 
@@ -420,10 +442,11 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
 	for i = 0 to (size_f/8 - 1) do
 		pushcode := !pushcode ++ pushq (ind ~ofs:(i*8) rdi)
 	done; 
+	code_arg ++
 	call f ++
 	popn size_arg ++
 	!pushcode,size_f
-	(* on free le malloc *)end
+	(* on free le malloc *)end *)
 
  |Cvec (l,size) -> 
    let n = List.length l and 
@@ -465,6 +488,11 @@ let rec compile_expr expr fpmax = label_count := !label_count + 1;
 
 
 
+
+
+
+
+(* COMPILE BLOC : FAIT *)
 	
 and compile_bloc bloc fpmax = match bloc with 
  |CEmptyBloc -> 
@@ -477,6 +505,10 @@ and compile_bloc bloc fpmax = match bloc with
   let (c,size) = compile_bloc b fpmax in 
   (fst(compile_instr i fpmax) ++ c),size
    
+
+
+
+(* COMPILE INSTR : EN COURS... *)
 
 and compile_instr instr fpmax = label_count := !label_count + 1; 
 	let label_string = string_of_int !label_count in
